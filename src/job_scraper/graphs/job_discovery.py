@@ -144,6 +144,18 @@ ATS_JOB_BOARDS = [
     "weworkremotely.com",
     "builtin.com",
     "workatastartup.com",
+    "remote.co",
+    "remoteok.com",
+    "workingnomads.com",
+    "nodesk.co",
+    "otta.com",
+    "ycombinator.com/jobs",
+    "hubstaff.com",
+    "cryptojobslist.com",
+    "web3.career",
+    "turing.com",
+    "arc.dev",
+    "simplyhired.com"
 ]
 
 RESUME_INTELLIGENCE_PROMPT = """You are an expert technical recruiter. Analyze this resume and produce a structured profile for targeted job searching.
@@ -152,6 +164,7 @@ RESUME:
 {resume_text}
 
 TARGET ROLE HINT: {target_role}
+AVAILABLE TARGET PLATFORMS: {platforms_list}
 
 Produce a JSON response with this EXACT schema:
 {{
@@ -168,7 +181,7 @@ Produce a JSON response with this EXACT schema:
 }}
 
 RULES FOR GENERATING search_queries:
-- Each query should target ONE job board domain (e.g. lever.co) — do NOT use OR operators between domains
+- Each query should target ONE job board domain from the list of AVAILABLE TARGET PLATFORMS (e.g. lever.co) — do NOT use OR operators between domains
 - Do NOT use 'site:' operator — it is blocked. Instead just include the domain name in the query text.
 - Do NOT use 'OR' between domain names — Serper blocks this. Use separate queries instead.
 - Include the candidate's ACTUAL top skills in queries (e.g. "Python" "FastAPI" "LangGraph")
@@ -221,6 +234,7 @@ async def analyze_resume(state: JobDiscoveryState) -> dict:
     prompt = RESUME_INTELLIGENCE_PROMPT.format(
         resume_text=resume_text[:6000],  # Cap resume length for prompt
         target_role=target_role,
+        platforms_list=", ".join(ATS_JOB_BOARDS),
     )
 
     try:
