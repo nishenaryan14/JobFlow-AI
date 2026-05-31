@@ -385,7 +385,7 @@ uv run run_with_trigger  # Run discovery with JSON trigger payload
 
 ## 📄 License
 
-This project is for personal/portfolio use. See the repository for license details.
+Copyright © 2026 Aryan Nishen. This project is for personal/portfolio use. All rights reserved.
 
 ---
 
