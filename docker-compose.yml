@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  # ── FastAPI Python Backend ──────────────────────────────────────────────────
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: jobflow-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/jobflow
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Next.js Frontend ────────────────────────────────────────────────────────
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: jobflow-webapp
+    ports:
+      - "3000:3000"
+    environment:
+      - FASTAPI_URL=http://api:8000
+      - MONGODB_URI=mongodb://mongo:27017/jobflow
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: jobflow-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis (session store + future task queue broker) ────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: jobflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,48 @@
+# Python virtual env and caches
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# uv lock artifacts (keep pyproject.toml and uv.lock, skip the rest)
+.uv/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Development output files
+output/
+job_discovery_run.log.txt
+job_discovery_run.log
+test_crew_output*.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets (never include in Docker image)
+.env
+.env.local
+.env.production
+
+# Playwright browsers (installed at runtime in container)
+# Comment out if you want to include them in image for faster startup
+# .venv/lib/python*/site-packages/playwright/driver/
+
+# Large model files
+*.bin
+*.safetensors

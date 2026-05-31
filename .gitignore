@@ -1,0 +1,79 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Node.js / Next.js ────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+tsconfig.tsbuildinfo
+
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs & Temp ───────────────────────────────────────────────────────────────
+*.log
+*.log.txt
+*.db
+
+# ── Project-specific ignores ──────────────────────────────────────────────────
+# LangGraph checkpoints
+.langgraph.db
+
+# Test output artifacts
+test_crew_output*.json
+output/
+
+# Uploaded test files
+webapp/test.docx
+
+# Unrelated translation verification files
+tr_verification/
+implementation_plan.md
+
+# Resume files
+AryanNishen_Resume_Hatch.pdf
+
+# Lock files (keep uv.lock and package-lock.json for reproducibility)
+# uv.lock — KEEP
+# package-lock.json — KEEP
+
+# Credentials and secrets
+*cred.txt
+*.cred
+*.creds
+credentials/
+secrets/
+

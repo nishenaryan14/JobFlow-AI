@@ -1,0 +1,64 @@
+[project]
+name = "job_scraper"
+version = "2.0.0"
+description = "Personal AI Job Application Platform — discovers, analyzes, and ranks remote AI agent roles against your resume using LangGraph pipelines."
+authors = [{ name = "Aryan Nishen", email = "aryannishen27@gmail.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # ── LangGraph + LangChain (core AI orchestration) ──────────────────
+    "langgraph>=0.4",
+    "langchain-openai>=0.3",
+    "langchain-google-genai>=2.1",
+    "langchain-community>=0.3",
+    "langchain-core>=0.3",
+    "langsmith>=0.3",
+    # ── API + Server ──────────────────────────────────────────────────
+    "fastapi>=0.135.3",
+    "uvicorn>=0.42.0",
+    "sse-starlette>=3.3.4",
+    "python-multipart>=0.0.22",
+    # ── Database + Session ────────────────────────────────────────────
+    "motor>=3.7.1",
+    "redis>=5.0.0",
+    # ── Background Tasks ──────────────────────────────────────────────
+    "apscheduler>=3.11.2",
+    # ── Document Processing ───────────────────────────────────────────
+    "pypdf2>=3.0.1",
+    "python-docx>=1.2.0",
+    "markdown>=3.6",
+    "weasyprint>=68.1",
+    "xhtml2pdf>=0.2.16",
+    # ── RPA (Auto-Apply) ──────────────────────────────────────────────
+    "playwright>=1.58.0",
+    # ── Utilities ─────────────────────────────────────────────────────
+    "python-dotenv>=1.2.2",
+    "openai>=1.50.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0",
+    "langgraph-checkpoint-sqlite>=3.1.0",
+]
+
+[project.scripts]
+job_scraper = "job_scraper.main:run"
+run_crew = "job_scraper.main:run"
+train = "job_scraper.main:train"
+replay = "job_scraper.main:replay"
+test = "job_scraper.main:test"
+run_with_trigger = "job_scraper.main:run_with_trigger"
+generate_report = "job_scraper.report_generator:generate_pdf"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+override-dependencies = [
+    "lancedb>=0.17.0,<0.20.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+]
