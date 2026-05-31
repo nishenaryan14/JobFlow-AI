@@ -36,49 +36,109 @@
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Next.js Frontend                         │
-│          (Resume Upload · Job Cards · ATS Gauge · Kanban)       │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ REST + SSE
-┌────────────────────────────▼────────────────────────────────────┐
-│                      FastAPI Bridge Server                       │
-│   /analyze-resume  /stream-matches  /ats-score  /enhance-resume │
-│   /auto-apply      /parse-pdf       /init-session               │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                    LangGraph Pipelines                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐ │
-│  │ Job Discovery│ │Resume Analysis│ │ ATS Scoring             │ │
-│  │   (7 nodes)  │ │  (2 nodes)   │ │  (2 nodes)              │ │
-│  └──────────────┘ └──────────────┘ └──────────────────────────┘ │
-│  ┌──────────────┐ ┌──────────────────────────────────────────┐  │
-│  │   Resume     │ │ User Matching (SSE streaming pipeline)   │  │
-│  │ Enhancement  │ │ Discovery → Evaluate → Stream → Persist  │  │
-│  │  (3 nodes)   │ └──────────────────────────────────────────┘  │
-│  └──────────────┘                                               │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-         ┌───────────────────┼──────────────────┐
-         ▼                   ▼                  ▼
-    ┌─────────┐       ┌───────────┐      ┌───────────┐
-    │MongoDB 7│       │Redis 7    │      │SQLite     │
-    │(jobs,   │       │(sessions, │      │(LangGraph │
-    │ resumes)│       │ TTL: 4h)  │      │ checkpts) │
-    └─────────┘       └───────────┘      └───────────┘
+### System Architecture
+```mermaid
+graph TD
+    %% Define Styles
+    classDef client fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef server fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef pipeline fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff;
+    classDef db fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+
+    %% Node Layout
+    subgraph Frontend ["💻 Client Interface"]
+        webapp["Next.js Web App<br>(App Router, TypeScript, Tailwind)"]:::client
+    end
+
+    subgraph Backend ["⚙️ API Bridge & Workers"]
+        api["FastAPI App Server<br>(Uvicorn, REST + SSE API)"]:::server
+        scout["Background Daemon<br>(APScheduler Worker)"]:::server
+    end
+
+    subgraph LangGraphPipelines ["🧠 LangGraph AI Engines"]
+        discover["Job Discovery Graph<br>(Scouting, Quality Gate)"]:::pipeline
+        analysis["Resume Analysis Graph<br>(Resume Parsing, Assessment)"]:::pipeline
+        ats["ATS Scoring Graph<br>(Keyword/Skill Matching)"]:::pipeline
+        enhance["Resume Enhancement Graph<br>(reflection, LaTeX Moderncv)"]:::pipeline
+    end
+
+    subgraph Databases ["🗄️ Storage Layer"]
+        mongo[("MongoDB 7<br>(Jobs, Resumes, Applications)")]:::db
+        redis[("Redis 7<br>(Session Store)")]:::db
+        sqlite[("SQLite<br>(Graph Checkpointer)")]:::db
+    end
+
+    %% Relations
+    webapp -->|REST Requests| api
+    webapp -->|SSE Real-time Job Stream| api
+    
+    api -->|Trigger Pipelines| discover
+    api -->|Trigger Analysis| analysis
+    api -->|Trigger ATS Check| ats
+    api -->|Trigger Enhancement| enhance
+    
+    scout -->|Trigger Nightly Search| discover
+
+    discover -.->|Checkpoints| sqlite
+    analysis -.->|Checkpoints| sqlite
+    enhance -.->|Checkpoints| sqlite
+
+    discover -->|Read/Write Data| mongo
+    analysis -->|Read/Write Data| mongo
+    ats -->|Read Data| mongo
+    enhance -->|Read Data| mongo
+
+    api -->|Verify Session Token| redis
+    discover -->|API/Scraping Fallbacks| mongo
 ```
 
 ### LangGraph Pipeline: Job Discovery
+```mermaid
+graph TD
+    classDef start_end fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#fff;
+    classDef node_step fill:#6366f1,stroke:#4338ca,stroke-width:2px,color:#fff;
+    classDef action_step fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#fff;
+    classDef route fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff;
 
+    %% Workflow Nodes
+    START(["🏁 START"]):::start_end
+    analyze_resume["🔍 analyze_resume<br>(Resume Intelligence AI)"]:::node_step
+    search_jobs["📡 search_jobs<br>(Google/Serper Search)"]:::node_step
+    fetch_job_apis["🔌 fetch_job_apis<br>(Adzuna & Remotive APIs)"]:::node_step
+    extract_details["🔬 extract_details<br>(Concurrent LLM Extractor)"]:::node_step
+    quality_gate["🛡️ quality_gate<br>(Data Filtering & Cleaning)"]:::node_step
+    query_refiner["🔁 query_refiner<br>(Query Refinement Node)"]:::node_step
+    match_and_rank["📊 match_and_rank<br>(Resume Matching AI)"]:::node_step
+    persist["💾 persist<br>(MongoDB Storage)"]:::node_step
+    END(["🏁 END"]):::start_end
+
+    %% Decision Node
+    check_quality{"Decision:<br>Check Quality"}:::route
+
+    %% Flow Connections
+    START --> analyze_resume
+    
+    %% Parallel Exec
+    analyze_resume --> search_jobs
+    analyze_resume --> fetch_job_apis
+    
+    search_jobs --> extract_details
+    fetch_job_apis --> extract_details
+    
+    extract_details --> quality_gate
+    quality_gate --> check_quality
+
+    %% Routing Decision
+    check_quality -->|0 Valid Jobs Found| query_refiner
+    check_quality -->|Valid Jobs & Resume Available| match_and_rank
+    check_quality -->|Valid Jobs & No Resume| persist
+
+    %% Cycles and Joins
+    query_refiner -->|Refined Queries| search_jobs
+    match_and_rank --> persist
+    persist --> END
 ```
-analyze_resume → search_jobs → extract_details → quality_gate ─┬→ match_and_rank → persist → END
-                      ▲                                        │
-                      │                              (0 valid) │
-                      └──── query_refiner ◄────────────────────┘
-                             (Reflection Loop)
-```
+
 
 <br>
 
@@ -101,7 +161,7 @@ git clone https://github.com/your-username/jobflow-ai.git
 cd jobflow-ai
 ```
 
-Create `job_scraper/.env`:
+Create `.env` in the project root:
 
 ```env
 # Required
@@ -120,7 +180,6 @@ LANGCHAIN_API_KEY=lsv2_...
 
 ```bash
 # Python backend
-cd job_scraper
 uv sync
 
 # Next.js frontend
@@ -141,7 +200,7 @@ This starts MongoDB, Redis, the FastAPI backend, and the Next.js frontend.
 **Option B — Local development**
 
 ```powershell
-# From job_scraper/ directory:
+# From project root:
 .\start.ps1
 ```
 
@@ -149,11 +208,10 @@ Or manually:
 
 ```bash
 # Terminal 1: FastAPI backend
-cd job_scraper
 uv run uvicorn api.server:app --reload --port 8000
 
 # Terminal 2: Next.js frontend
-cd job_scraper/webapp
+cd webapp
 npm run dev
 ```
 
@@ -220,49 +278,46 @@ npm run dev
 
 ```
 .
-├── docker-compose.yml           # Full-stack orchestration
-├── .github/workflows/ci.yml     # CI pipeline
+├── docker-compose.yml           # Full-stack Docker orchestration
+├── .github/workflows/ci.yml     # GitHub Actions CI workflow
+├── pyproject.toml               # Python project configuration
+├── uv.lock                      # Python dependency lockfile
 │
-├── job_scraper/                  # Main application
-│   ├── api/                     # FastAPI REST server
-│   │   ├── server.py            # Route definitions + SSE endpoints
-│   │   ├── db.py                # MongoDB + Redis data layer
-│   │   ├── config.py            # Validated env configuration
-│   │   ├── auto_apply.py        # Playwright RPA module
-│   │   └── background_scout.py  # APScheduler daemon (4h cycle)
-│   │
-│   ├── src/job_scraper/
-│   │   ├── graphs/              # LangGraph pipelines
-│   │   │   ├── job_discovery.py # 7-node discovery + reflection loop
-│   │   │   ├── resume_analysis.py
-│   │   │   ├── ats_scoring.py
-│   │   │   ├── resume_enhancement.py
-│   │   │   ├── user_matching.py # SSE streaming pipeline
-│   │   │   ├── state.py         # TypedDict state schemas
-│   │   │   ├── tools.py         # Serper search + multi-strategy scraper
-│   │   │   ├── llm_factory.py   # Centralized LLM configuration
-│   │   │   ├── error_handling.py# Retry logic + structured output
-│   │   │   └── tracing.py       # Structured logging + LangSmith
-│   │   │
-│   │   ├── tools/               # Document generation tools
-│   │   │   ├── latex_resume_tool.py    # Markdown → LaTeX (moderncv)
-│   │   │   └── resume_document_tool.py # Markdown → PDF / DOCX
-│   │   │
-│   │   ├── models.py            # Pydantic data models
-│   │   ├── report_generator.py  # Styled PDF report generation
-│   │   └── main.py              # CLI entry point
-│   │
-│   ├── webapp/                  # Next.js frontend
-│   │   └── src/
-│   │       ├── app/             # Pages (home, analyze, jobs, tracker)
-│   │       └── components/      # React components
-│   │
-│   ├── knowledge/               # Resume + user preferences (RAG context)
-│   ├── tests/                   # pytest test suite
-│   └── output/                  # Generated reports (PDF + Markdown)
+├── api/                         # FastAPI REST Server
+│   ├── server.py                # REST routes and SSE endpoints
+│   ├── db.py                    # MongoDB + Redis data layers
+│   ├── config.py                # Pydantic environment configuration
+│   ├── auto_apply.py            # Playwright automation (Lever/Greenhouse)
+│   └── background_scout.py      # Background daemon cycle runner
 │
-└── tr_verification/             # Translation Verification Pipeline (separate)
-    └── src/tr_verification/     # Android strings.xml quality verification
+├── src/job_scraper/             # Core Python Package
+│   ├── graphs/                  # LangGraph StateGraph Pipelines
+│   │   ├── job_discovery.py     # Job Scouting, filtering and Query Reflection
+│   │   ├── resume_analysis.py   # Parsing and Skills Assessment
+│   │   ├── ats_scoring.py       # ATS compatibility analyzer
+│   │   ├── resume_enhancement.py# Reflection rewrites and gap analysis
+│   │   ├── user_matching.py     # Real-time SSE streaming coordinator
+│   │   ├── state.py             # TypedDict state definitions
+│   │   ├── tools.py             # Google Serper and Web Scraper tools
+│   │   ├── llm_factory.py       # Centralized LLM selection
+│   │   ├── error_handling.py    # Robust structured output retry engines
+│   │   └── tracing.py           # Structured logging and tracing decorators
+│   │
+│   ├── tools/                   # Output Generation Tools
+│   │   ├── latex_resume_tool.py    # Markdown-to-LaTeX (moderncv style) compiler
+│   │   └── resume_document_tool.py # Markdown-to-PDF / DOCX exporter
+│   │
+│   ├── models.py                # Pydantic schema models
+│   ├── report_generator.py      # PDF Career Assessment renderer
+│   └── main.py                  # CLI entry point
+│
+├── webapp/                      # Next.js 16 Web Application
+│   ├── src/app/                 # App Router pages (jobs, analyze, tracker)
+│   └── src/components/          # Reusable React components (ATS Score Gauge)
+│
+├── knowledge/                   # Target resume & user search preferences
+├── tests/                       # Complete Pytest test suite
+└── docs/                        # Architectural strategies and reports
 ```
 
 <br>
@@ -270,10 +325,8 @@ npm run dev
 ## 🧪 Testing
 
 ```bash
-cd job_scraper
-
 # Run the full test suite
-uv run pytest tests/ -v
+uv run pytest -v
 
 # Run a quick smoke test of all graph pipelines
 uv run test
@@ -328,25 +381,7 @@ uv run generate_report   # Convert markdown report to styled PDF
 uv run run_with_trigger  # Run discovery with JSON trigger payload
 ```
 
-<br>
 
-## 🗂 Companion Module: Translation Verification
-
-A separate LangGraph pipeline (`tr_verification/`) for enterprise Android localization QA:
-
-- Fetches `strings.xml` from GitHub Enterprise
-- Runs multi-layer verification: structural → deterministic QA → neural scoring (COMET) → semantic review
-- Supports 22+ languages with DeepSeek-R1 reference alignment
-- Generates per-locale quality reports with pass/fail gates
-- SQLite checkpointing for fault recovery
-
-```bash
-cd tr_verification
-uv sync
-uv run verify
-```
-
-<br>
 
 ## 📄 License
 
