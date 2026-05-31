@@ -21,7 +21,7 @@ def _require(name: str) -> str:
     if not value:
         raise RuntimeError(
             f"\n\n❌  Missing required environment variable: {name}\n"
-            f"    Add it to job_scraper/.env or job_scraper/webapp/.env.local\n"
+            f"    Add it to .env or webapp/.env.local\n"
         )
     return value
 
@@ -48,25 +48,34 @@ class Settings:
     ENVIRONMENT: str
     OPENAI_API_KEY: str
     NEXTAUTH_SECRET: str
+    USE_OLLAMA: bool
+    OLLAMA_MODEL: str
+    OLLAMA_BASE_URL: str
 
     def __init__(self) -> None:
         missing: list[str] = []
+        
+        # Check if Ollama is selected to skip DeepSeek and Google validations
+        use_ollama = os.getenv("USE_OLLAMA", "").strip().lower() == "true"
+        required_keys = ["MONGODB_URI", "SERPER_API_KEY"]
+        if not use_ollama:
+            required_keys.extend(["DEEPSEEK_API_KEY", "GOOGLE_API_KEY"])
 
         # Collect all missing required keys before raising so the user sees
         # all problems at once rather than fixing one at a time.
         for key in ("MONGODB_URI", "DEEPSEEK_API_KEY", "GOOGLE_API_KEY", "SERPER_API_KEY"):
             value = os.getenv(key, "").strip()
-            if not value:
-                missing.append(key)
-            else:
+            if value:
                 setattr(self, key, value)
+            elif key in required_keys:
+                missing.append(key)
 
         if missing:
             lines = "\n".join(f"    • {k}" for k in missing)
             raise RuntimeError(
                 f"\n\n❌  Server refused to start — missing required env vars:\n"
                 f"{lines}\n\n"
-                f"    Add them to  job_scraper/.env  and restart.\n"
+                f"    Add them to .env and restart.\n"
             )
 
         # Optional settings
@@ -74,6 +83,9 @@ class Settings:
         self.ENVIRONMENT = _optional("ENVIRONMENT", "development")
         self.OPENAI_API_KEY = _optional("OPENAI_API_KEY")
         self.NEXTAUTH_SECRET = _optional("NEXTAUTH_SECRET")
+        self.USE_OLLAMA = use_ollama
+        self.OLLAMA_MODEL = _optional("OLLAMA_MODEL", "glm-5.1:cloud")
+        self.OLLAMA_BASE_URL = _optional("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
