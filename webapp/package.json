@@ -12,6 +12,7 @@
     "dompurify": "^3.3.3",
     "html-to-docx": "^1.8.0",
     "html2pdf.js": "^0.14.0",
+    "lucide-react": "^1.17.0",
     "marked": "^17.0.5",
     "mongoose": "^9.3.3",
     "next": "16.2.2",

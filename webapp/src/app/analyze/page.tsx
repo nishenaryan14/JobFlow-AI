@@ -2,6 +2,27 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { 
+  UploadCloud, 
+  Plug, 
+  FileText, 
+  Cpu, 
+  BarChart3, 
+  AlertTriangle, 
+  Mail, 
+  Phone, 
+  Link2, 
+  Brain, 
+  Star, 
+  TrendingUp, 
+  Target, 
+  Briefcase, 
+  GraduationCap, 
+  Code, 
+  Search, 
+  Terminal,
+  Activity
+} from "lucide-react";
 
 interface AnalysisResult {
   name: string;
@@ -29,12 +50,12 @@ interface LogEntry {
   type: "info" | "success" | "warn" | "agent";
 }
 
-const STAGE_CONFIG: Record<string, { icon: string; title: string; desc: string }> = {
-  uploading:  { icon: "📤", title: "Reading Resume",         desc: "Extracting text from your file" },
-  connecting: { icon: "🔌", title: "Connecting to AI",       desc: "Checking LangGraph pipeline availability" },
-  parsing:    { icon: "📄", title: "Parsing Structure",      desc: "Identifying sections, contact info, and layout" },
-  agents:     { icon: "🤖", title: "AI Pipeline Running",    desc: "LangGraph nodes evaluating your profile" },
-  scoring:    { icon: "📊", title: "Generating Report",      desc: "Building your career assessment" },
+const STAGE_CONFIG: Record<string, { icon: React.ReactNode; title: string; desc: string }> = {
+  uploading:  { icon: <UploadCloud size={20} />, title: "Reading Resume",         desc: "Extracting text from your file" },
+  connecting: { icon: <Plug size={20} />, title: "Connecting to AI",       desc: "Checking LangGraph pipeline availability" },
+  parsing:    { icon: <FileText size={20} />, title: "Parsing Structure",      desc: "Identifying sections, contact info, and layout" },
+  agents:     { icon: <Cpu size={20} />, title: "AI Pipeline Running",    desc: "LangGraph nodes evaluating your profile" },
+  scoring:    { icon: <BarChart3 size={20} />, title: "Generating Report",      desc: "Building your career assessment" },
 };
 
 const ALL_STAGES = ["uploading", "connecting", "parsing", "agents", "scoring"];
@@ -218,8 +239,9 @@ export default function AnalyzePage() {
         <div className="analysis-container">
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <h2 style={{ fontSize: "var(--font-2xl)", fontWeight: 800, marginBottom: 8 }}>
-              🔬 Analyzing Your Resume
+            <h2 style={{ fontSize: "var(--font-2xl)", fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Activity size={24} className="spin-animation" style={{ color: "var(--accent-primary-light)" }} />
+              Analyzing Your Resume
             </h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: 8 }}>
               {fileName && <span style={{ color: "var(--accent-primary-light)", fontWeight: 600 }}>{fileName}</span>}
@@ -304,7 +326,7 @@ export default function AnalyzePage() {
       {/* ── Error State ── */}
       {stage === "error" && (
         <div className="empty-state">
-          <div className="empty-icon">⚠️</div>
+          <div className="empty-icon" style={{ color: "var(--accent-primary)", display: "flex", justifyContent: "center", marginBottom: 16 }}><AlertTriangle size={48} /></div>
           <h3>Analysis Error</h3>
           <p>{error}</p>
           {/* Show log even on error */}
@@ -346,7 +368,15 @@ export default function AnalyzePage() {
                 fontSize: "var(--font-xs)", fontWeight: 600,
                 color: engine === "crewai" ? "var(--accent-primary-light)" : "#eab308",
               }}>
-                {engine === "crewai" ? "🤖 Powered by LangGraph + DeepSeek" : "⚙️ Local Analysis Engine"}
+                {engine === "crewai" ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Cpu size={12} /> Powered by LangGraph + DeepSeek
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Activity size={12} /> Local Heuristic Engine
+                  </span>
+                )}
               </span>
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
@@ -389,13 +419,15 @@ export default function AnalyzePage() {
           {/* Summary */}
           {result.summary && (
             <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
-              <h3 style={{ fontSize: "var(--font-lg)", fontWeight: 700, marginBottom: 12 }}>📋 AI Summary</h3>
+              <h3 style={{ fontSize: "var(--font-lg)", fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                <FileText size={18} style={{ color: "var(--accent-primary-light)" }} /> AI Summary
+              </h3>
               <p style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>{result.summary}</p>
               {result.email && (
                 <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  {result.email && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>✉️ {result.email}</span>}
-                  {result.phone && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>📱 {result.phone}</span>}
-                  {result.linkedin && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>🔗 {result.linkedin}</span>}
+                  {result.email && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)", display: "inline-flex", alignItems: "center", gap: 4 }}><Mail size={12} /> {result.email}</span>}
+                  {result.phone && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)", display: "inline-flex", alignItems: "center", gap: 4 }}><Phone size={12} /> {result.phone}</span>}
+                  {result.linkedin && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)", display: "inline-flex", alignItems: "center", gap: 4 }}><Link2 size={12} /> {result.linkedin}</span>}
                 </div>
               )}
             </div>
@@ -405,10 +437,12 @@ export default function AnalyzePage() {
           <div className="results-grid">
             {/* Skills */}
             <div className="result-card glass-card">
-              <h3><span>🧠</span> Skills Detected ({result.skills?.length || 0})</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Brain size={18} style={{ color: "var(--accent-primary-light)" }} /> Skills Detected ({result.skills?.length || 0})</h3>
               <div className="skills-list">
                 {result.strongSkills?.map((s) => (
-                  <span key={s} className="skill-tag strong">⭐ {s}</span>
+                  <span key={s} className="skill-tag strong" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <Star size={10} fill="var(--accent-primary)" stroke="none" /> {s}
+                  </span>
                 ))}
                 {result.skills
                   ?.filter((s) => !result.strongSkills?.includes(s))
@@ -420,7 +454,7 @@ export default function AnalyzePage() {
 
             {/* Strengths */}
             <div className="result-card glass-card">
-              <h3><span>💪</span> Key Strengths</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><TrendingUp size={18} style={{ color: "#22c55e" }} /> Key Strengths</h3>
               <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.strengths?.map((s, i) => (
                   <li key={i} style={{
@@ -435,7 +469,7 @@ export default function AnalyzePage() {
 
             {/* Weaknesses */}
             <div className="result-card glass-card">
-              <h3><span>🎯</span> Areas to Strengthen</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Target size={18} style={{ color: "var(--accent-primary-light)" }} /> Areas to Strengthen</h3>
               <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.weaknesses?.map((w, i) => (
                   <li key={i} style={{
@@ -450,7 +484,7 @@ export default function AnalyzePage() {
 
             {/* Experience */}
             <div className="result-card glass-card">
-              <h3><span>💼</span> Experience ({result.experience?.length || 0} roles)</h3>
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Briefcase size={18} style={{ color: "var(--text-secondary)" }} /> Experience ({result.experience?.length || 0} roles)</h3>
               {result.experience?.length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {result.experience.map((exp, i) => (
@@ -475,7 +509,7 @@ export default function AnalyzePage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
               {result.education?.length > 0 && (
                 <div className="glass-card" style={{ padding: 24 }}>
-                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: 700, marginBottom: 12 }}>🎓 Education</h3>
+                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><GraduationCap size={18} style={{ color: "var(--text-secondary)" }} /> Education</h3>
                   {result.education.map((e, i) => (
                     <p key={i} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: 6 }}>{e}</p>
                   ))}
@@ -483,7 +517,7 @@ export default function AnalyzePage() {
               )}
               {result.projects && result.projects.length > 0 && (
                 <div className="glass-card" style={{ padding: 24 }}>
-                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: 700, marginBottom: 12 }}>🚀 Projects</h3>
+                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><Code size={18} style={{ color: "var(--text-secondary)" }} /> Projects</h3>
                   {result.projects.map((p, i) => (
                     <p key={i} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: 6 }}>{p}</p>
                   ))}
@@ -499,7 +533,7 @@ export default function AnalyzePage() {
               fontWeight: 600, color: "var(--text-secondary)", listStyle: "none",
               display: "flex", alignItems: "center", gap: 8,
             }}>
-              🗒 View Agent Log ({logs.length} events)
+              <Terminal size={14} style={{ color: "var(--text-tertiary)" }} /> View Agent Log ({logs.length} events)
             </summary>
             <div style={{
               padding: "12px 20px", fontFamily: "monospace", fontSize: "var(--font-xs)",
@@ -529,8 +563,9 @@ export default function AnalyzePage() {
                 router.push("/jobs");
               }}
               id="find-jobs-btn"
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, margin: "0 auto" }}
             >
-              🔍 Find Matching Jobs
+              <Search size={16} /> Find Matching Jobs
             </button>
             <p style={{ color: "var(--text-tertiary)", fontSize: "var(--font-sm)", marginTop: 12 }}>
               AI agents will search for jobs matching your {result.skills?.length || 0} detected skills

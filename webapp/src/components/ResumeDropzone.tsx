@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface ResumeDropzoneProps {
   onFileAccepted: (file: File, text: string, sessionId: string | null) => void;
@@ -10,12 +11,14 @@ export default function ResumeDropzone({ onFileAccepted }: ResumeDropzoneProps) 
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
       setIsProcessing(true);
       setFileName(file.name);
+      setError(null);
 
       try {
         const formData = new FormData();
@@ -29,13 +32,11 @@ export default function ResumeDropzone({ onFileAccepted }: ResumeDropzoneProps) 
         if (!res.ok) throw new Error("Upload failed");
 
         const data = await res.json();
-
-        // data.sessionId is the Redis-backed resume session ID returned by FastAPI.
-        // It is null when FastAPI is offline (graceful degradation).
         onFileAccepted(file, data.text, data.sessionId ?? null);
       } catch (err) {
         console.error("Upload error:", err);
-        alert("Failed to process the resume. Please try again.");
+        setError("Failed to process the resume. Please try again.");
+        setFileName(null);
       } finally {
         setIsProcessing(false);
       }
@@ -84,24 +85,35 @@ export default function ResumeDropzone({ onFileAccepted }: ResumeDropzoneProps) 
           onChange={onInputChange}
         />
 
-        {isProcessing ? (
+        {error ? (
           <>
-            <div className="upload-icon">⏳</div>
+            <div className="upload-icon" style={{ color: "#ef4444" }}>
+              <AlertCircle size={40} strokeWidth={1.5} />
+            </div>
+            <h3 style={{ color: "#ef4444" }}>{error}</h3>
+            <p>Click to try again</p>
+          </>
+        ) : isProcessing ? (
+          <>
+            <div className="upload-icon">
+              <Loader2 size={40} strokeWidth={1.5} className="spin-icon" />
+            </div>
             <h3>Processing {fileName}...</h3>
             <p>Extracting text from your resume</p>
-            <div style={{ marginTop: 16 }}>
-              <span className="spinner" />
-            </div>
           </>
         ) : fileName ? (
           <>
-            <div className="upload-icon">✅</div>
+            <div className="upload-icon" style={{ color: "#22c55e" }}>
+              <CheckCircle2 size={40} strokeWidth={1.5} />
+            </div>
             <h3>{fileName}</h3>
             <p>Resume loaded! Click to upload a different one.</p>
           </>
         ) : (
           <>
-            <div className="upload-icon">📄</div>
+            <div className="upload-icon">
+              <Upload size={40} strokeWidth={1.5} />
+            </div>
             <h3>Drop Your Resume Here</h3>
             <p>or click to browse files</p>
             <div className="file-types">

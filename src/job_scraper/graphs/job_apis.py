@@ -36,6 +36,21 @@ async def fetch_remotive_jobs(search_term: str, limit: int = 30) -> list[dict]:
                 "posted_date": item.get("publication_date", ""),
                 "source": "remotive",
             })
+        # Filter to last 30 days only
+        from datetime import datetime, timedelta
+        cutoff = datetime.now() - timedelta(days=7)
+        fresh_jobs = []
+        for j in jobs:
+            try:
+                posted = j.get("posted_date", "")
+                if posted:
+                    posted_dt = datetime.fromisoformat(posted.replace("Z", "+00:00").replace("+00:00", ""))
+                    if posted_dt < cutoff:
+                        continue
+            except (ValueError, TypeError):
+                pass  # Keep jobs with unparseable dates
+            fresh_jobs.append(j)
+        jobs = fresh_jobs
         logger.info(f"[job_apis] Remotive: {len(jobs)} jobs for '{search_term}'")
         return jobs
 
@@ -62,6 +77,7 @@ async def fetch_adzuna_jobs(
                 "app_key": app_key,
                 "results_per_page": limit,
                 "what": search_term,
+                "max_days_old": 7,
                 "content-type": "application/json",
             },
             timeout=15,

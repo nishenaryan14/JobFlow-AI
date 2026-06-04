@@ -17,7 +17,7 @@ from typing import Optional
 logger = logging.getLogger("jobflow.graphs")
 
 
-def search_serper(query: str, num_results: int = 15) -> list[dict]:
+def search_serper(query: str, num_results: int = 10) -> list[dict]:
     """Search for job listings using the Serper.dev API.
 
     Args:
@@ -44,7 +44,7 @@ def search_serper(query: str, num_results: int = 15) -> list[dict]:
             resp = requests.post(
                 "https://google.serper.dev/search",
                 headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
-                json={"q": query, "num": num_results},
+                json={"q": query, "num": min(num_results, 10), "tbs": "qdr:w"},
                 timeout=30,
             )
             resp.raise_for_status()

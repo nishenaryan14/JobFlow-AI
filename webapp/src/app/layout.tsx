@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import DevConsole from "@/components/DevConsole";
 
 export const metadata: Metadata = {
   title: "JobFlow AI — Intelligent Career Platform",
   description:
-    "AI-powered resume analysis, job matching, ATS scoring, and application tracking. Powered by CrewAI agents.",
+    "AI-powered resume analysis, job matching, ATS scoring, and application tracking. Land your dream role faster.",
 };
 
 export default function RootLayout({
@@ -17,8 +18,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning>
         <div className="bg-mesh" />
-        <Navbar />
-        <main>{children}</main>
+        <div className="app-layout">
+          <Navbar />
+          <main className="main-content">
+            {children}
+          </main>
+        </div>
+        <DevConsole />
       </body>
     </html>
   );

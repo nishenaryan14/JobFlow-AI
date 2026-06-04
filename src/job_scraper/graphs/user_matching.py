@@ -109,6 +109,23 @@ def build_frontend_payload(job: dict, match_data: dict, job_id: str) -> dict:
     }
 
 
+# ── SSE Helper ────────────────────────────────────────────────────────────────
+
+def _sse_status(phase: str, message: str, agent: str = "Pipeline", icon: str = "🧠",
+                msg_type: str = "info") -> dict:
+    """Build an SSE status event with phase, agent, and type info for the frontend log."""
+    return {
+        "event": "status",
+        "data": json.dumps({
+            "phase": phase,
+            "message": message,
+            "agent": agent,
+            "agentIcon": icon,
+            "type": msg_type,
+        }),
+    }
+
+
 # ── Persistence ───────────────────────────────────────────────────────────────
 
 async def persist_matched_job(payload: dict, jobs_collection) -> None:
@@ -118,10 +135,12 @@ async def persist_matched_job(payload: dict, jobs_collection) -> None:
 
     now = datetime.now(timezone.utc)
     try:
+        # Strip _id from $set payload — MongoDB's _id is immutable on existing docs
+        set_payload = {k: v for k, v in payload.items() if k != "_id"}
         await jobs_collection.update_one(
             {"title": payload["title"], "company": payload["company"]},
             {
-                "$set": {**payload, "updatedAt": now},
+                "$set": {**set_payload, "updatedAt": now},
                 "$setOnInsert": {"scrapedAt": now, "createdAt": now},
             },
             upsert=True,
@@ -141,29 +160,108 @@ async def stream_job_matches(resume_text: str, target_role: str) -> AsyncGenerat
       3. Stream each scored job to the frontend as an SSE event
       4. Persist to MongoDB for caching
 
-    Yields SSE event dicts: {"event": "job_match", "data": <json>}
-
-    This is the main entry point called by server.py's /stream-matches endpoint.
+    Yields SSE event dicts: {"event": "...", "data": <json>}
     """
 
     # ── Phase 1: Run Job Discovery Graph ──────────────────────────────────
-    yield {
-        "event": "status",
-        "data": json.dumps({"phase": "discovery", "message": "Searching job boards..."}),
-    }
+    yield _sse_status("analyzing", "Initializing pipeline — analyzing your resume...",
+                      "Pipeline", "🧠", "info")
+    yield _sse_status("analyzing", f"Target role identified: {target_role}",
+                      "Pipeline", "🧠", "result")
+    yield _sse_status("searching", "Generating tailored search queries from your resume...",
+                      "Search", "🔍", "action")
 
     try:
         from job_scraper.graphs.job_discovery import job_discovery_graph
         import uuid
 
         config = {"configurable": {"thread_id": f"stream_{uuid.uuid4().hex[:8]}"}}
-        result = await job_discovery_graph.ainvoke({
-            "target_role": target_role,
-            "resume_text": resume_text,  # Resume-aware discovery + quality gate
-        }, config=config)
 
-        # Use validated_jobs (post quality gate) if available
-        discovered_jobs = result.get("validated_jobs") or result.get("scraped_jobs", [])
+        # Use astream_events to get progress from inside the graph
+        discovered_jobs = []
+        validated_jobs = []
+        last_node = ""
+
+        async for event in job_discovery_graph.astream_events(
+            {
+                "target_role": target_role,
+                "resume_text": resume_text,
+            },
+            config=config,
+            version="v2",
+        ):
+            kind = event.get("event", "")
+            name = event.get("name", "")
+
+            # Track node transitions for progress updates
+            if kind == "on_chain_start" and name and name != last_node:
+                last_node = name
+                if name == "analyze_resume":
+                    yield _sse_status("analyzing", "Analyzing resume skills and experience...",
+                                      "Search", "🔍", "action")
+                elif name == "generate_queries":
+                    yield _sse_status("searching", "Generating search queries from your profile...",
+                                      "Search", "🔍", "action")
+                elif name == "search_jobs":
+                    yield _sse_status("searching", "Searching across job boards and career pages...",
+                                      "Search", "🔍", "tool")
+                elif name == "scrape_urls":
+                    yield _sse_status("scraping", "Scraping job posting pages for details...",
+                                      "Scraper", "📄", "action")
+                elif name == "extract_details":
+                    yield _sse_status("extracting", "Extracting structured job data with AI...",
+                                      "Scraper", "📄", "tool")
+                elif name == "quality_gate":
+                    yield _sse_status("quality", "Running quality gate on discovered jobs...",
+                                      "Quality", "🔎", "action")
+                elif name == "match_and_rank":
+                    yield _sse_status("ranking", "Ranking jobs against your resume...",
+                                      "Scorer", "🎯", "action")
+                elif name == "persist":
+                    yield _sse_status("ranking", "Saving results...",
+                                      "Pipeline", "🧠", "action")
+
+            # Capture the final output
+            if kind == "on_chain_end" and name == "search_jobs":
+                output = event.get("data", {}).get("output", {})
+                urls = output.get("search_results", [])
+                if urls:
+                    yield _sse_status("searching",
+                                      f"✅ Found {len(urls)} URLs from job boards",
+                                      "Search", "🔍", "result")
+
+            if kind == "on_chain_end" and name == "extract_details":
+                output = event.get("data", {}).get("output", {})
+                scraped = output.get("scraped_jobs", [])
+                if scraped:
+                    yield _sse_status("extracting",
+                                      f"✅ Extracted {len(scraped)} unique job listings",
+                                      "Scraper", "📄", "result")
+
+            if kind == "on_chain_end" and name == "quality_gate":
+                output = event.get("data", {}).get("output", {})
+                validated = output.get("validated_jobs", [])
+                if validated is not None:
+                    yield _sse_status("quality",
+                                      f"✅ {len(validated)} jobs passed quality gate",
+                                      "Quality", "🔎", "result")
+
+            if kind == "on_chain_end" and name == "match_and_rank":
+                output = event.get("data", {}).get("output", {})
+                rankings = output.get("job_rankings", [])
+                yield _sse_status("ranking",
+                                  f"✅ Ranked {len(rankings)} jobs by fit score",
+                                  "Scorer", "🎯", "result")
+
+            # Capture final graph output
+            if kind == "on_chain_end" and event.get("tags", []) == []:
+                output = event.get("data", {}).get("output", {})
+                if isinstance(output, dict):
+                    validated_jobs = output.get("validated_jobs", [])
+                    if not validated_jobs:
+                        validated_jobs = output.get("scraped_jobs", [])
+
+        discovered_jobs = validated_jobs
         logger.info(f"[stream] Discovery complete: {len(discovered_jobs)} validated jobs found")
 
     except Exception as exc:
@@ -188,13 +286,8 @@ async def stream_job_matches(resume_text: str, target_role: str) -> AsyncGenerat
         return
 
     # ── Phase 2: Score Each Job Against Resume ────────────────────────────
-    yield {
-        "event": "status",
-        "data": json.dumps({
-            "phase": "scoring",
-            "message": f"Scoring {len(discovered_jobs)} jobs against your resume...",
-        }),
-    }
+    yield _sse_status("scoring", f"Scoring {len(discovered_jobs)} jobs against your resume...",
+                      "Scorer", "🎯", "action")
 
     # Get MongoDB collections for persistence (optional)
     jobs_collection = None
@@ -222,6 +315,14 @@ async def stream_job_matches(resume_text: str, target_role: str) -> AsyncGenerat
 
     for i in range(0, len(discovered_jobs), batch_size):
         batch = discovered_jobs[i : i + batch_size]
+        batch_num = (i // batch_size) + 1
+        total_batches = (len(discovered_jobs) + batch_size - 1) // batch_size
+
+        yield _sse_status("scoring",
+                          f"Scoring batch {batch_num}/{total_batches} — "
+                          f"evaluating {len(batch)} jobs...",
+                          "Scorer", "🎯", "thinking")
+
         tasks = [evaluate_single_job(job, resume_text) for job in batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -229,13 +330,13 @@ async def stream_job_matches(resume_text: str, target_role: str) -> AsyncGenerat
             if not match_data or isinstance(match_data, Exception):
                 continue
 
-            # Skip clearly irrelevant jobs (fit score < 3)
+            # Skip clearly irrelevant jobs (fit score < 1)
             fit = match_data.get("fit_score", 0)
             try:
                 fit = float(fit)
             except (TypeError, ValueError):
                 fit = 0
-            if fit < 3:
+            if fit < 1:
                 logger.debug(f"[stream] Skipping low-fit job: {job.get('title')} (score={fit})")
                 continue
 
@@ -250,8 +351,17 @@ async def stream_job_matches(resume_text: str, target_role: str) -> AsyncGenerat
             await persist_matched_job(payload, jobs_collection)
 
             payload["applicationStatus"] = application_statuses.get(payload["_id"])
+
+            yield _sse_status("scoring",
+                              f"✅ {title} @ {company} — Fit: {payload['fitScore']}/10",
+                              "Scorer", "🎯", "result")
+
             yield {"event": "job_match", "data": json.dumps(payload)}
             yielded += 1
+
+    yield _sse_status("scoring",
+                      f"✅ Pipeline complete — {yielded} jobs matched from {len(discovered_jobs)} discovered",
+                      "Pipeline", "🧠", "result")
 
     yield {
         "event": "done",

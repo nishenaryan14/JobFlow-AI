@@ -47,28 +47,38 @@ async def call_llm_structured(
     """
     last_error = None
 
+    # Detect DeepSeek — it doesn't support response_format/structured output
+    _is_deepseek = False
+    try:
+        base_url = str(getattr(llm, 'openai_api_base', '') or getattr(llm, 'base_url', '') or '')
+        if 'deepseek' in base_url.lower():
+            _is_deepseek = True
+    except Exception:
+        pass
+
     for attempt in range(1, max_retries + 1):
-        # Strategy 1: Use with_structured_output (preferred)
-        try:
-            structured_llm = llm.with_structured_output(output_schema)
-            result = await structured_llm.ainvoke([
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=prompt),
-            ])
-            if result is not None:
-                return result
+        # Strategy 1: Use with_structured_output (skip for DeepSeek — always fails)
+        if not _is_deepseek:
+            try:
+                structured_llm = llm.with_structured_output(output_schema)
+                result = await structured_llm.ainvoke([
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt),
+                ])
+                if result is not None:
+                    return result
 
-        except (AttributeError, NotImplementedError):
-            # Model doesn't support with_structured_output — fall through to Strategy 2
-            pass
+            except (AttributeError, NotImplementedError):
+                # Model doesn't support with_structured_output — fall through to Strategy 2
+                pass
 
-        except Exception as exc:
-            last_error = exc
-            logger.warning(
-                f"[call_llm_structured] Strategy 1 attempt {attempt}/{max_retries} "
-                f"failed for {output_schema.__name__}: {exc}"
-            )
-            # FALL THROUGH to Strategy 2 (raw JSON) instead of retrying Strategy 1
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    f"[call_llm_structured] Strategy 1 attempt {attempt}/{max_retries} "
+                    f"failed for {output_schema.__name__}: {exc}"
+                )
+                # FALL THROUGH to Strategy 2 (raw JSON) instead of retrying Strategy 1
 
         # Strategy 2: Raw completion + JSON parse (always tried if Strategy 1 failed)
         try:

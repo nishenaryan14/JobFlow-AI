@@ -1,5 +1,7 @@
 "use client";
 
+import { MapPin, Globe, Star, CheckCircle, Mic, Gift, XCircle, Eye, Pin } from "lucide-react";
+
 export interface JobData {
   _id: string;
   title: string;
@@ -37,17 +39,17 @@ function getInitials(company: string) {
 function getStatusStyle(status: string) {
   switch (status) {
     case "applied":
-      return { label: "Applied", icon: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.10)" };
+      return { label: "Applied", Icon: CheckCircle, color: "#22c55e", bg: "rgba(34,197,94,0.10)" };
     case "interview":
-      return { label: "Interview", icon: "🎤", color: "#a78bfa", bg: "rgba(167,139,250,0.10)" };
+      return { label: "Interview", Icon: Mic, color: "#a78bfa", bg: "rgba(167,139,250,0.10)" };
     case "offer":
-      return { label: "Offer", icon: "🎉", color: "#f59e0b", bg: "rgba(245,158,11,0.10)" };
+      return { label: "Offer", Icon: Gift, color: "#f59e0b", bg: "rgba(245,158,11,0.10)" };
     case "rejected":
-      return { label: "Rejected", icon: "❌", color: "#ef4444", bg: "rgba(239,68,68,0.10)" };
+      return { label: "Rejected", Icon: XCircle, color: "#ef4444", bg: "rgba(239,68,68,0.10)" };
     case "interested":
-      return { label: "Interested", icon: "👀", color: "#60a5fa", bg: "rgba(96,165,250,0.10)" };
+      return { label: "Interested", Icon: Eye, color: "#60a5fa", bg: "rgba(96,165,250,0.10)" };
     default:
-      return { label: status, icon: "📌", color: "#888", bg: "rgba(136,136,136,0.08)" };
+      return { label: status, Icon: Pin, color: "#888", bg: "rgba(136,136,136,0.08)" };
   }
 }
 
@@ -70,11 +72,15 @@ export default function JobCard({ job, onClick }: JobCardProps) {
         </div>
       </div>
 
-      {/* Meta: location + remote + application status (inline, no overlap) */}
+      {/* Meta: location + remote + application status */}
       <div className="job-card-meta">
-        <span className="meta-tag">📍 {job.location || "Remote"}</span>
+        <span className="meta-tag">
+          <MapPin size={13} /> {job.location || "Remote"}
+        </span>
         {job.remotePolicy && (
-          <span className="meta-tag">🏠 {job.remotePolicy}</span>
+          <span className="meta-tag">
+            <Globe size={13} /> {job.remotePolicy}
+          </span>
         )}
         {statusInfo && (
           <span
@@ -86,7 +92,7 @@ export default function JobCard({ job, onClick }: JobCardProps) {
               fontWeight: 700,
             }}
           >
-            {statusInfo.icon} {statusInfo.label}
+            <statusInfo.Icon size={13} /> {statusInfo.label}
           </span>
         )}
       </div>
@@ -108,7 +114,7 @@ export default function JobCard({ job, onClick }: JobCardProps) {
       {/* Footer: score + action */}
       <div className="job-card-footer">
         <span className={getScoreBadge(job.fitScore)}>
-          ⭐ {job.fitScore}/10 Fit
+          <Star size={13} /> {job.fitScore}/10 Fit
         </span>
         <button
           className="btn btn-sm btn-secondary"

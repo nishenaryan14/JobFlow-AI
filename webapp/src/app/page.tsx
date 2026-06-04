@@ -2,29 +2,30 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ScanSearch, Target, BarChart3, Sparkles, Cpu, Layers, Activity } from "lucide-react";
 import ResumeDropzone from "@/components/ResumeDropzone";
 
 const features = [
   {
-    icon: "🔬",
+    icon: ScanSearch,
     title: "AI Resume Analysis",
     description:
-      "LangGraph AI pipeline parses, evaluates, and scores your resume in seconds",
+      "Instantly parse, evaluate, and score your resume with intelligent analysis",
   },
   {
-    icon: "🎯",
+    icon: Target,
     title: "Smart Job Matching",
     description:
       "Discovers and ranks jobs based on your unique skills and experience",
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "ATS Score Check",
     description:
       "Get a real ATS compatibility score for any job description instantly",
   },
   {
-    icon: "✨",
+    icon: Sparkles,
     title: "Resume Enhancement",
     description:
       "AI-powered resume rewriting tailored to match specific job requirements",
@@ -36,22 +37,15 @@ export default function HomePage() {
   const [, setLoaded] = useState(false);
 
   const handleFileAccepted = async (file: File, text: string, sessionId: string | null) => {
-    // Store the parsed resume text for the analysis page
     sessionStorage.setItem("resumeText", text);
     sessionStorage.setItem("resumeFileName", file.name);
 
-    // Store the server-side session ID (Redis-backed, TTL 4h).
-    // The jobs page will use this to call /stream-matches without resending
-    // the full resume text in every SSE request.
     if (sessionId) {
       sessionStorage.setItem("resumeSessionId", sessionId);
     } else {
-      // FastAPI was offline during upload — clear any stale session ID
-      // so the jobs page knows to fall back to text-based matching.
       sessionStorage.removeItem("resumeSessionId");
     }
 
-    // ── Clear ALL old job caches so new resume gets fresh results ──
     const keysToRemove: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
@@ -67,29 +61,87 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero">
-        <h1>
-          Your AI-Powered
-          <br />
-          <span className="gradient-text">Career Command Center</span>
-        </h1>
-        <p className="subtitle">
-          Drop your resume and let LangGraph pipelines analyze your profile, discover
-          matching jobs, score your ATS compatibility, and enhance your resume —
-          all in one place.
-        </p>
+      <div className="hero-columns-container">
+        {/* Hero Left Side: Content & Dropzone */}
+        <section className="hero-left-section">
+          <h1>
+            Your AI-Powered
+            <br />
+            <span className="gradient-text">Career Command Center</span>
+          </h1>
+          <p className="subtitle">
+            Drop your resume and let our autonomous AI agents crawl job boards, evaluate matching positions, score ATS alignment, and tailor your profile — all in one centralized hub.
+          </p>
 
-        <ResumeDropzone onFileAccepted={handleFileAccepted} />
-      </section>
+          <div style={{ marginTop: 28, maxWidth: "560px" }}>
+            <ResumeDropzone onFileAccepted={handleFileAccepted} />
+          </div>
+        </section>
+
+        {/* Hero Right Side: Floating Unity-style Dashboard Visuals */}
+        <section className="hero-right-visuals desktop-only">
+          <div className="visual-wrapper">
+            <div className="neon-orb" />
+            
+            {/* Widget 1: Agent Telemetry (Drifting) */}
+            <div className="floating-widget card-1 animate-float">
+              <div className="widget-header">
+                <span className="widget-icon"><Cpu size={14} /></span>
+                <span>Agent Telemetry</span>
+                <span className="status-dot green" />
+              </div>
+              <div className="widget-body">
+                <div className="metric-row">
+                  <span>ATS Match Rate</span>
+                  <strong style={{ color: "#22c55e" }}>94%</strong>
+                </div>
+                <div className="metric-bar-bg">
+                  <div className="metric-bar-fill" style={{ width: "94%" }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Widget 2: Live Crawl Matches */}
+            <div className="floating-widget card-2 animate-float-delayed">
+              <div className="widget-header">
+                <span className="widget-icon"><Activity size={14} /></span>
+                <span>Job Discovery Node</span>
+              </div>
+              <div className="widget-body">
+                <span className="discovery-count">31</span>
+                <span className="discovery-lbl">Matched jobs processed</span>
+              </div>
+            </div>
+
+            {/* Widget 3: Architecture Blueprint Card */}
+            <div className="floating-widget card-3 animate-float">
+              <div className="widget-header">
+                <span className="widget-icon"><Layers size={14} /></span>
+                <span>Pipeline Engine</span>
+              </div>
+              <div className="widget-body">
+                <div className="bp-line active"><span>• parse_resume</span><span>100%</span></div>
+                <div className="bp-line active"><span>• match_and_rank</span><span>100%</span></div>
+                <div className="bp-line active"><span>• persist_mongodb</span><span>ok</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <section className="features-grid stagger-enter">
-        {features.map((f) => (
-          <div key={f.title} className="feature-card glass-card">
-            <span className="feature-icon">{f.icon}</span>
-            <h3>{f.title}</h3>
-            <p>{f.description}</p>
-          </div>
-        ))}
+        {features.map((f) => {
+          const Icon = f.icon;
+          return (
+            <div key={f.title} className="feature-card glass-card">
+              <span className="feature-icon">
+                <Icon size={28} strokeWidth={1.5} />
+              </span>
+              <h3>{f.title}</h3>
+              <p>{f.description}</p>
+            </div>
+          );
+        })}
       </section>
 
       <section
@@ -148,7 +200,7 @@ export default function HomePage() {
               </span>
               {i < 4 && (
                 <span style={{ color: "var(--text-tertiary)", fontSize: 20 }}>
-                  →
+                  \u2192
                 </span>
               )}
             </div>

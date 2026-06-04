@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongodb";
 import { Job } from "@/models/Job";
 import { Application } from "@/models/Application";
 
+import mongoose from "mongoose";
+
 // GET: fetch existing jobs + merge application status
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +14,15 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     if (id) {
-      const job = await Job.findById(id).lean();
+      let job = null;
+      if (id.match(/^[0-9a-fA-F]{24}$/)) {
+        job = await Job.findById(id).lean();
+      } else {
+        const rawCollection = mongoose.connection.db?.collection("jobs");
+        if (rawCollection) {
+          job = await rawCollection.findOne({ _id: id });
+        }
+      }
       if (job) {
         // Check if user has an application for this job
         const app = await Application.findOne({ jobId: String(job._id) }).lean();

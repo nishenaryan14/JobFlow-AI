@@ -37,18 +37,22 @@ def get_deepseek_chat() -> ChatOpenAI:
 
     Falls back to local Ollama if USE_OLLAMA=true.
     """
-    use_ollama = os.environ.get("USE_OLLAMA", "").lower() == "true"
-    if use_ollama:
-        model = os.environ.get("OLLAMA_MODEL", "glm-5.1:cloud")
-        return get_ollama_chat(model)
-
-    return ChatOpenAI(
+    cloud_model = ChatOpenAI(
         model="deepseek-chat",
         api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
         base_url="https://api.deepseek.com",
         temperature=0,
         max_retries=3,
     )
+
+    use_ollama = os.environ.get("USE_OLLAMA", "").lower() == "true"
+    if use_ollama:
+        model = os.environ.get("OLLAMA_MODEL", "glm-5.1:cloud")
+        ollama_model = get_ollama_chat(model)
+        # Attempt Ollama, fall back to cloud if it fails
+        return ollama_model.with_fallbacks([cloud_model]) # type: ignore[return-value]
+
+    return cloud_model
 
 
 @lru_cache(maxsize=1)
@@ -57,16 +61,19 @@ def get_gemini_flash() -> ChatGoogleGenerativeAI:
 
     Falls back to local Ollama if USE_OLLAMA=true.
     """
-    use_ollama = os.environ.get("USE_OLLAMA", "").lower() == "true"
-    if use_ollama:
-        model = os.environ.get("OLLAMA_MODEL", "glm-5.1:cloud")
-        # ChatGoogleGenerativeAI returns a LangChain class, but since we are returning
-        # ChatOpenAI (Ollama) here, Python dynamic typing handles it fine in graph nodes.
-        return get_ollama_chat(model)  # type: ignore[return-value]
-
-    return ChatGoogleGenerativeAI(
+    cloud_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
         temperature=0,
         max_retries=3,
     )
+
+    use_ollama = os.environ.get("USE_OLLAMA", "").lower() == "true"
+    if use_ollama:
+        model = os.environ.get("OLLAMA_MODEL", "glm-5.1:cloud")
+        ollama_model = get_ollama_chat(model)
+        # Attempt Ollama, fall back to cloud if it fails
+        return ollama_model.with_fallbacks([cloud_model])  # type: ignore[return-value]
+
+    return cloud_model
+

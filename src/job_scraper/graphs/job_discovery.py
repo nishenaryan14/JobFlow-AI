@@ -114,21 +114,21 @@ def _sanitize_company_name(company: str, url: str = "") -> str:
 # analyze_resume agent generates tailored queries instead.
 
 FALLBACK_QUERIES = [
-    '"{role}" LangGraph remote lever.co',
-    '"{role}" AI agent remote greenhouse.io',
-    '"{role}" agentic AI remote smartrecruiters.com',
-    '"{role}" multi-agent LLM remote wellfound.com',
-    '"{role}" AI remote jobs.ashbyhq.com',
-    '"agentic AI engineer" LangGraph remote hiring 2025',
-    '"{role}" AI agent remote weworkremotely.com',
-    '"{role}" LLM agent remote builtin.com',
-    '"AI agent engineer" agentic remote hiring 2025',
-    '"LangGraph" engineer remote hiring 2025',
-    '"{role}" remote apply AI agent 2025',
-    '"{role}" Python LangChain remote hiring',
-    '"{role}" remote hiring apply',
-    '"AI engineer" Python remote 2025',
-    '"{role}" hiring remote 2025',
+    '{role} remote hiring 2026',
+    '{role} remote jobs apply now',
+    '{role} remote apply 2026',
+    '{role} hiring remote work from home',
+    '{role} remote full time hiring',
+    '{role} remote engineer hiring 2026',
+    '{role} remote developer jobs',
+    '{role} remote open positions',
+    '{role} hiring now remote apply',
+    '{role} remote job openings 2026',
+    '{role} remote career opportunities',
+    '{role} work from anywhere hiring',
+    '{role} remote positions available',
+    '{role} remote hiring actively recruiting',
+    '{role} remote team hiring 2026',
 ]
 
 # ATS platforms to mention in generated queries (one per query, no OR)
@@ -164,7 +164,6 @@ RESUME:
 {resume_text}
 
 TARGET ROLE HINT: {target_role}
-AVAILABLE TARGET PLATFORMS: {platforms_list}
 
 Produce a JSON response with this EXACT schema:
 {{
@@ -176,26 +175,33 @@ Produce a JSON response with this EXACT schema:
   "domains": ["<industry domains they have experience in, e.g. 'fintech', 'healthcare', 'SaaS'>"],
   "preferred_stack": ["<primary language/framework stack, e.g. 'Python', 'FastAPI', 'LangGraph'>"],
   "search_queries": [
-    "<15-20 Google search queries tailored to this candidate's actual skills>"
+    "<20 Google search queries tailored to this candidate's actual skills>"
   ]
 }}
 
-RULES FOR GENERATING search_queries:
-- Each query should target ONE job board domain from the list of AVAILABLE TARGET PLATFORMS (e.g. lever.co) — do NOT use OR operators between domains
-- Do NOT use 'site:' operator — it is blocked. Instead just include the domain name in the query text.
-- Do NOT use 'OR' between domain names — Serper blocks this. Use separate queries instead.
-- Include the candidate's ACTUAL top skills in queries (e.g. "Python" "FastAPI" "LangGraph")
-- Match queries to seniority level (don't search "Staff Engineer" for a junior)
+CRITICAL RULES FOR GENERATING search_queries:
+- Keep queries SIMPLE: use plain keywords, NOT multiple quoted phrases
+- Use AT MOST ONE quoted phrase per query (e.g. one job title in quotes)
+- Do NOT use 'site:' operator
+- Do NOT use 'OR' operator
+- Do NOT append domain names like lever.co or greenhouse.io to queries
+- Include the candidate's top 1-2 skills as plain keywords
+- Always include 'remote' or 'hiring' in most queries
 - Generate 3 tiers of queries:
-  TIER 1 (8 queries): Exact role + top 2 skills + one job board domain
-  TIER 2 (8 queries): Role variants + broader terms + different boards
-  TIER 3 (5 queries): Wide net — just role + "hiring" + year, no specific board
-- Mix: some queries for primary role, some for alternate roles
-- NEVER include aggregator sites (indeed.com, glassdoor.com, ziprecruiter.com, linkedin.com)
-- Always include "remote" in most queries
-- Example GOOD query: '"AI Engineer" "Python" "LangGraph" remote lever.co'
-- Example BAD query: '"AI Engineer" remote lever.co OR greenhouse.io' (OR blocked by API)
-- Example BAD query: '"engineer" indeed.com' (too broad + aggregator)
+  TIER 1 (8 queries): Primary role title + top skill + remote/hiring
+  TIER 2 (7 queries): Alternate role titles + broader skill keywords
+  TIER 3 (5 queries): Wide net — just role keyword + hiring + remote
+- NEVER include aggregator sites (indeed.com, glassdoor.com, linkedin.com)
+
+EXAMPLE GOOD QUERIES:
+- AI engineer Python LangGraph remote hiring
+- senior machine learning engineer remote 2025
+- LLM engineer Python remote apply
+- AI agent developer remote hiring
+
+EXAMPLE BAD QUERIES (DO NOT generate these):
+- "AI Engineer" "Python" "LangGraph" remote lever.co  (too many quoted phrases + domain)
+- "AI Agent Engineer" "CrewAI" "Python" remote greenhouse.io  (will be rejected by search API)
 """
 
 
@@ -234,7 +240,6 @@ async def analyze_resume(state: JobDiscoveryState) -> dict:
     prompt = RESUME_INTELLIGENCE_PROMPT.format(
         resume_text=resume_text[:6000],  # Cap resume length for prompt
         target_role=target_role,
-        platforms_list=", ".join(ATS_JOB_BOARDS),
     )
 
     try:
@@ -319,7 +324,7 @@ async def search_jobs(state: JobDiscoveryState) -> dict:
         async with sem:
             logger.info(f"[search_jobs] Running query {i}/{len(queries)}: {query[:80]}...")
             try:
-                return await asyncio.to_thread(search_serper, query, 30)
+                return await asyncio.to_thread(search_serper, query, 10)
             except Exception as exc:
                 logger.warning(f"[search_jobs] Query {i} failed: {exc}")
                 return []
@@ -701,20 +706,20 @@ For each job, return a JSON object in this format:
   ]
 }}
 
-REJECTION CRITERIA (reject if ANY apply):
+KEEP CRITERIA (default to KEEPING jobs — only reject if clearly invalid):
+- Real job posting with an actual employer → KEEP
+- Role is in a technical/engineering domain → KEEP
+- Jobs with source "remotive" or "adzuna" → ALWAYS KEEP (pre-validated API results)
+- Any software/AI/ML/data/backend/frontend engineering role → KEEP
+- When in doubt, KEEP the job — let the scoring phase determine actual fit
+
+REJECTION CRITERIA (reject ONLY if clearly invalid):
 1. NOT a real job posting — it's an aggregator search result page, blog post, or company info page
 2. Title contains aggregator noise: "vacancies", "jobs found", "job openings", "hiring alert"
 3. Company name is a job board (Indeed, Glassdoor, ZipRecruiter, LinkedIn, Upwork)
-4. Role domain is completely wrong for the candidate (e.g. candidate is an engineer but listing is for Product Manager, Recruiter, Sales)
+4. Role is in a COMPLETELY DIFFERENT field (e.g. nursing, accounting, legal, sales, marketing, HR, recruiting) — but any engineering/tech role should be KEPT even if not an exact match
 5. The listing is clearly expired or a talent pipeline with no actual open role
-6. Seniority mismatch: If candidate is junior/mid-level, REJECT roles explicitly requiring "Staff", "Principal", "Distinguished", "VP", "Director", "Head of". However, keep "Senior" roles — they can still be worth applying to.
-
-KEEP CRITERIA:
-- Real job posting with an actual employer
-- Role is in the right domain for the candidate (engineering/technical)
-- Has at least some skill overlap with the candidate's profile
-- Jobs from known job boards (Remotive, Adzuna, etc.) with real company names should be KEPT — they are pre-validated API results
-- When in doubt, KEEP the job — let the scoring phase determine actual fit
+6. Job posting date is clearly old (more than 14 days ago) or the listing explicitly says "closed", "no longer accepting applications", or "this position has been filled"
 """
 
 
@@ -929,7 +934,18 @@ async def match_and_rank(state: JobDiscoveryState) -> dict:
     if not jobs:
         return {"scored_report": "No jobs to score.", "job_rankings": []}
 
-    jobs_summary = json.dumps(jobs[:20], indent=2, default=str)
+    # Cap at 15 jobs and send compact summaries to avoid massive prompts
+    capped_jobs = jobs[:15]
+    compact_jobs = []
+    for j in capped_jobs:
+        compact_jobs.append({
+            "title": j.get("title", ""),
+            "company": j.get("company", ""),
+            "required_skills": (j.get("required_skills") or [])[:8],
+            "location": j.get("location", ""),
+            "experience_level": j.get("experience_level", ""),
+        })
+    jobs_summary = json.dumps(compact_jobs, indent=1, default=str)
 
     prompt = f"""Score each job listing against the candidate's resume.
 
@@ -946,15 +962,18 @@ Sort by fit_score descending.
 Jobs:
 {jobs_summary}
 
-Candidate Resume:
-{resume}"""
+Candidate Resume (first 3000 chars):
+{resume[:3000]}"""
 
     try:
-        result = await call_llm_structured(
-            llm=llm,
-            prompt=prompt,
-            output_schema=JobRankingOutput,
-            system_prompt="You are an expert career analyst. Output structured JSON rankings.",
+        result = await asyncio.wait_for(
+            call_llm_structured(
+                llm=llm,
+                prompt=prompt,
+                output_schema=JobRankingOutput,
+                system_prompt="You are an expert career analyst. Output structured JSON rankings.",
+            ),
+            timeout=60,
         )
         rankings = [r.model_dump() for r in result.ranked_jobs]
         # Generate a text report as well for backward compatibility
@@ -965,6 +984,9 @@ Candidate Resume:
             report_lines.append(f"**Gaps**: {', '.join(r['skill_gaps'])}")
             report_lines.append(f"*{r['reasoning']}*\n")
         return {"scored_report": "\n".join(report_lines), "job_rankings": rankings}
+    except asyncio.TimeoutError:
+        logger.warning("[match_and_rank] Gemini scoring timed out after 60s — skipping ranking")
+        return {"scored_report": "Scoring timed out.", "job_rankings": []}
     except Exception as e:
         logger.warning(f"[match_and_rank] Structured scoring failed: {e} — falling back to text")
         report = await call_llm_text(
