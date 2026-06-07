@@ -13,10 +13,16 @@ WORKDIR /app
 
 # ── Dependencies layer (cached unless pyproject.toml changes) ─────────────────
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+
+# Install ONLY dependencies first (not the project itself).
+# The source code hasn't been copied yet, so hatchling can't build the wheel.
+RUN uv sync --frozen --no-dev --no-install-project
 
 # ── Application code ──────────────────────────────────────────────────────────
 COPY . .
+
+# Now install the project itself (source is available)
+RUN uv sync --frozen --no-dev
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 EXPOSE 8000
