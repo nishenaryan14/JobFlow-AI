@@ -189,7 +189,8 @@ export default function JobsPage() {
     }
 
     const params = new URLSearchParams({ session_id: sessionId, target_role: targetRole });
-    const sseUrl = `http://127.0.0.1:8000/stream-matches?${params}`;
+    const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
+    const sseUrl = `${backendUrl}/stream-matches?${params}`;
 
     console.log(`[jobs] Opening SSE stream: ${sseUrl}`);
     const eventSource = new EventSource(sseUrl);

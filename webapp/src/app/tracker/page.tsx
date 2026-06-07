@@ -51,7 +51,8 @@ export default function TrackerPage() {
     setSyncLogs(["Connecting to Mailbox Agent..."]);
     
     try {
-      const res = await fetch("http://127.0.0.1:8000/sync-inbox", {
+      const backendUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${backendUrl}/sync-inbox`, {
         method: "POST"
       });
       const data = await res.json();
