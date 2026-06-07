@@ -1,9 +1,18 @@
 # Python API — Slim production image (NO Playwright/Chromium for free-tier hosting)
 FROM python:3.12-slim AS base
 
-# Minimal system deps (no Chromium/Playwright libs)
+# System deps for building native wheels (pycairo, weasyprint) + runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gcc \
+    pkg-config \
+    python3-dev \
+    libcairo2-dev \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast Python package manager)
@@ -15,7 +24,6 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Install ONLY dependencies first (not the project itself).
-# The source code hasn't been copied yet, so hatchling can't build the wheel.
 RUN uv sync --frozen --no-dev --no-install-project
 
 # ── Application code ──────────────────────────────────────────────────────────
