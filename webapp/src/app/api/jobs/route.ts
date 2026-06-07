@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       } else {
         const rawCollection = mongoose.connection.db?.collection("jobs");
         if (rawCollection) {
-          job = await rawCollection.findOne({ _id: id });
+          job = await rawCollection.findOne({ _id: id } as any);
         }
       }
       if (job) {
