@@ -61,7 +61,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="hero-columns-container">
+      <div className="hero-columns-container" suppressHydrationWarning>
         {/* Hero Left Side: Content & Dropzone */}
         <section className="hero-left-section">
           <h1>

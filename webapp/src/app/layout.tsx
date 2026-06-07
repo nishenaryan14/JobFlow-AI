@@ -18,9 +18,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning>
         <div className="bg-mesh" />
-        <div className="app-layout">
+        <div className="app-layout" suppressHydrationWarning>
           <Navbar />
-          <main className="main-content">
+          <main className="main-content" suppressHydrationWarning>
             {children}
           </main>
         </div>

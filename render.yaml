@@ -1,0 +1,27 @@
+# render.yaml — Infrastructure-as-Code for Render.com one-click deploy
+# Docs: https://docs.render.com/infrastructure-as-code
+
+services:
+  - type: web
+    name: jobflow-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.deploy
+    plan: free
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false        # Set manually in Render dashboard
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_PROJECT
+        value: "jobflow-ai"
+      - key: USE_OLLAMA
+        value: "false"
+      - key: MONGODB_URI
+        sync: false        # Set to your Atlas URI
+    healthCheckPath: /health

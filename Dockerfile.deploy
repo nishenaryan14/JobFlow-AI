@@ -1,0 +1,29 @@
+# Python API — Slim production image (NO Playwright/Chromium for free-tier hosting)
+FROM python:3.12-slim AS base
+
+# Minimal system deps (no Chromium/Playwright libs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (fast Python package manager)
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+# ── Dependencies layer (cached unless pyproject.toml changes) ─────────────────
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+# ── Application code ──────────────────────────────────────────────────────────
+COPY . .
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
+EXPOSE 8000
+
+# Single worker for free-tier (limited RAM)
+CMD ["uv", "run", "uvicorn", "api.server:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1", \
+     "--forwarded-allow-ips", "*"]

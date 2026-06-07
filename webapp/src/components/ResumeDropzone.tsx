@@ -77,12 +77,14 @@ export default function ResumeDropzone({ onFileAccepted }: ResumeDropzoneProps) 
         role="button"
         tabIndex={0}
         id="resume-dropzone"
+        suppressHydrationWarning
       >
         <input
           ref={inputRef}
           type="file"
           accept=".pdf,.docx,.md,.txt"
           onChange={onInputChange}
+          suppressHydrationWarning
         />
 
         {error ? (
