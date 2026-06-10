@@ -14,6 +14,8 @@ export interface JobData {
   applicationTip: string;
   applicationUrl: string;
   applicationStatus?: string | null;
+  postedDate?: string;
+  freshness?: string;
 }
 
 interface JobCardProps {
@@ -116,6 +118,12 @@ export default function JobCard({ job, onClick }: JobCardProps) {
         <span className={getScoreBadge(job.fitScore)}>
           <Star size={13} /> {job.fitScore}/10 Fit
         </span>
+              {job.freshness === "today" && (
+                <span className="badge" style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)", color: "#fff", fontSize: "0.65rem", padding: "2px 8px" }}>🔥 New Today</span>
+              )}
+              {job.freshness === "recent" && (
+                <span className="badge" style={{ background: "rgba(34,197,94,0.2)", color: "#22c55e", fontSize: "0.65rem", padding: "2px 8px" }}>Recent</span>
+              )}
         <button
           className="btn btn-sm btn-secondary"
           onClick={(e) => {

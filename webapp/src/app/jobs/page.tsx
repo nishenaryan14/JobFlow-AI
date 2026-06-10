@@ -8,7 +8,7 @@ import type { JobData } from "@/components/JobCard";
 import AgentLogFeed from "@/components/AgentLogFeed";
 import type { LogEntry } from "@/components/AgentLogFeed";
 
-type FilterType = "all" | "high" | "mid" | "low" | "applied" | "not-applied";
+type FilterType = "all" | "today" | "recent" | "high" | "mid" | "low" | "applied" | "not-applied";
 
 const JOB_MATCHES_CACHE_PREFIX = "jobMatchesCache_";
 const JOB_MATCHES_CACHE_TTL_MS = 15 * 60 * 1000;
@@ -326,7 +326,8 @@ export default function JobsPage() {
   const notAppliedCount = jobs.filter((j) => !j.applicationStatus).length;
 
   const filteredJobs = jobs.filter((j) => {
-    if (filter === "all") return true;
+    if (filter === "today") return j.freshness === "today";
+    if (filter === "recent") return j.freshness === "today" || j.freshness === "recent";
     if (filter === "high") return j.fitScore >= 7;
     if (filter === "mid") return j.fitScore >= 5 && j.fitScore < 7;
     if (filter === "low") return j.fitScore < 5;
@@ -359,6 +360,14 @@ export default function JobsPage() {
           {(
             [
               { key: "all", label: `All (${jobs.length})` },
+              {
+                key: "today",
+                label: `🔥 Today (${jobs.filter((j) => j.freshness === "today").length})`,
+              },
+              {
+                key: "recent",
+                label: `⚡ Last 3 Days (${jobs.filter((j) => j.freshness === "today" || j.freshness === "recent").length})`,
+              },
               {
                 key: "not-applied",
                 label: `New (${notAppliedCount})`,
@@ -470,7 +479,13 @@ export default function JobsPage() {
       ) : (
         <div className="jobs-grid stagger-enter">
           {filteredJobs
-            .sort((a, b) => b.fitScore - a.fitScore)
+            .sort((a, b) => {
+              const freshnessOrder: Record<string, number> = { today: 3, recent: 2, this_week: 1, unknown: 0 };
+              const fa = freshnessOrder[a.freshness || "unknown"] || 0;
+              const fb = freshnessOrder[b.freshness || "unknown"] || 0;
+              if (fa !== fb) return fb - fa;
+              return b.fitScore - a.fitScore;
+            })
             .map((job) => (
               <JobCard key={job._id} job={job} onClick={handleJobClick} />
             ))}

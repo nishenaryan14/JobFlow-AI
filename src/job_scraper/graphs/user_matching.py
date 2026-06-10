@@ -81,6 +81,31 @@ def normalize_fit_score(score: object) -> float:
     return round(max(0, min(10, value)), 1)
 
 
+def _compute_freshness(posted_date_str: str) -> str:
+    """Compute freshness label from a posted date string."""
+    if not posted_date_str or posted_date_str == "Not Listed":
+        return "unknown"
+    try:
+        from dateutil import parser as dateparser
+        posted = dateparser.parse(posted_date_str)
+        if posted is None:
+            return "unknown"
+        now = datetime.now(timezone.utc)
+        if posted.tzinfo is None:
+            from datetime import timezone as tz
+            posted = posted.replace(tzinfo=tz.utc)
+        delta = now - posted
+        hours = delta.total_seconds() / 3600
+        if hours <= 24:
+            return "today"
+        elif hours <= 72:
+            return "recent"
+        else:
+            return "this_week"
+    except Exception:
+        return "unknown"
+
+
 def build_frontend_payload(job: dict, match_data: dict, job_id: str) -> dict:
     """Build the frontend-compatible payload from a discovered job + match data."""
     responsibilities = job.get("key_responsibilities", []) or []
@@ -106,6 +131,8 @@ def build_frontend_payload(job: dict, match_data: dict, job_id: str) -> dict:
         "applicationTip": match_data.get("application_tip", "") or "",
         "requiredSkills": job.get("required_skills", []) or [],
         "responsibilities": responsibilities,
+        "postedDate": job.get("posted_date") or job.get("postedDate") or "",
+        "freshness": _compute_freshness(job.get("posted_date") or job.get("postedDate") or ""),
     }
 
 

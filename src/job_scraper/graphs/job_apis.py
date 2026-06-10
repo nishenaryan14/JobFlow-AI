@@ -38,7 +38,7 @@ async def fetch_remotive_jobs(search_term: str, limit: int = 30) -> list[dict]:
             })
         # Filter to last 30 days only
         from datetime import datetime, timedelta
-        cutoff = datetime.now() - timedelta(days=7)
+        cutoff = datetime.now() - timedelta(days=14)
         fresh_jobs = []
         for j in jobs:
             try:
@@ -77,7 +77,7 @@ async def fetch_adzuna_jobs(
                 "app_key": app_key,
                 "results_per_page": limit,
                 "what": search_term,
-                "max_days_old": 7,
+                "max_days_old": 14,
                 "content-type": "application/json",
             },
             timeout=15,
