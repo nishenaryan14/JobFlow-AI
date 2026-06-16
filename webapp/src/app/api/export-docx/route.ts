@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       table: { row: { cantSplit: true } },
       footer: true,
       pageNumber: true,
+      margins: { top: 720, right: 720, bottom: 720, left: 720 }, // 0.5 inch margins
     });
 
     return new NextResponse(fileBuffer as ArrayBuffer, {

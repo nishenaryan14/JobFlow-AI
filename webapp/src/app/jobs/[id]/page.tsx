@@ -90,6 +90,9 @@ export default function JobDetailPage() {
   const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [autoApplyStatus, setAutoApplyStatus] = useState<string | null>(null);
 
+  const [selectedRecommendations, setSelectedRecommendations] = useState<string[]>([]);
+  const [isApplyingRecs, setIsApplyingRecs] = useState(false);
+
   useEffect(() => {
     const stored = sessionStorage.getItem("selectedJob");
     if (stored) {
@@ -169,6 +172,38 @@ export default function JobDetailPage() {
     } finally {
       setIsEnhancing(false);
     }
+  };
+
+  const applyRecommendations = async () => {
+    if (!job || selectedRecommendations.length === 0) return;
+    setIsApplyingRecs(true);
+    try {
+      const resumeText = sessionStorage.getItem("resumeText") || "";
+      const res = await fetch("/api/apply-recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription: job.description || `${job.title} at ${job.company}`,
+          selectedRecommendations,
+        }),
+      });
+      if (!res.ok) throw new Error("Apply recommendations failed");
+      const data = await res.json();
+      setEnhancedResume(data.enhancedResume);
+      setEnhanceChanges(["Applied selected recommendations: " + selectedRecommendations.join(", ")]);
+      setShowComparison(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsApplyingRecs(false);
+    }
+  };
+
+  const toggleRecommendation = (rec: string) => {
+    setSelectedRecommendations((prev) =>
+      prev.includes(rec) ? prev.filter((r) => r !== rec) : [...prev, rec]
+    );
   };
 
   const triggerAutoApply = async () => {
@@ -526,17 +561,38 @@ export default function JobDetailPage() {
                     {atsResult.recommendations.map((r, i) => (
                       <li
                         key={i}
+                        onClick={() => toggleRecommendation(r)}
                         style={{
                           fontSize: "var(--font-sm)",
                           color: "var(--text-secondary)",
                           paddingLeft: 14,
                           borderLeft: "2px solid var(--accent-primary)",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "8px",
+                          cursor: "pointer",
                         }}
                       >
-                        {r}
+                        <input
+                          type="checkbox"
+                          checked={selectedRecommendations.includes(r)}
+                          onChange={() => {}} // Handled by li onClick
+                          style={{ marginTop: "3px", cursor: "pointer" }}
+                        />
+                        <span>{r}</span>
                       </li>
                     ))}
                   </ul>
+                  {selectedRecommendations.length > 0 && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ marginTop: 12, width: "100%" }}
+                      onClick={applyRecommendations}
+                      disabled={isApplyingRecs}
+                    >
+                      {isApplyingRecs ? "Applying to Resume..." : `Apply ${selectedRecommendations.length} Recommendations to Resume`}
+                    </button>
+                  )}
                 </>
               )}
             </div>

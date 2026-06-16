@@ -12,9 +12,9 @@ const RESUME_CSS = `
 
   body {
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 11pt;
+    font-size: 9.5pt;
     color: #1a1a1a;
-    line-height: 1.55;
+    line-height: 1.35;
     padding: 0;
     margin: 0;
     background: #fff;
@@ -23,64 +23,64 @@ const RESUME_CSS = `
   #resume-wrapper {
     max-width: 780px;
     margin: 0 auto;
-    padding: 40px 48px;
+    padding: 20px 32px;
   }
 
   h1 {
-    font-size: 22pt;
+    font-size: 18pt;
     font-weight: 700;
     color: #111;
     text-align: center;
-    margin-bottom: 4px;
-    border-bottom: 2.5px solid #1a1a1a;
-    padding-bottom: 8px;
+    margin-bottom: 2px;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 4px;
     letter-spacing: -0.3px;
   }
 
   /* Contact line directly under name */
   h1 + p {
     text-align: center;
-    font-size: 9.5pt;
+    font-size: 8.5pt;
     color: #555;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 
   h2 {
-    font-size: 11.5pt;
+    font-size: 10.5pt;
     font-weight: 700;
     color: #1a1a1a;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     border-bottom: 1.2px solid #bbb;
-    margin-top: 18px;
-    margin-bottom: 8px;
-    padding-bottom: 3px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
   }
 
   h3 {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     font-weight: 600;
     color: #1a1a1a;
-    margin-top: 10px;
+    margin-top: 6px;
     margin-bottom: 2px;
   }
 
   p {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     color: #2a2a2a;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   ul {
-    padding-left: 18px;
-    margin-bottom: 8px;
+    padding-left: 16px;
+    margin-bottom: 4px;
   }
 
   li {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     color: #2a2a2a;
-    margin-bottom: 3px;
-    line-height: 1.5;
+    margin-bottom: 2px;
+    line-height: 1.35;
   }
 
   a {
@@ -91,7 +91,7 @@ const RESUME_CSS = `
   hr {
     border: none;
     border-top: 1px solid #ddd;
-    margin: 10px 0;
+    margin: 6px 0;
   }
 
   strong { font-weight: 600; }

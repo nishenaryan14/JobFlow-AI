@@ -76,6 +76,11 @@ class AutoApplyRequestEndpoint(BaseModel):
 
 # ── Resume Studio Models ──────────────────────────────────────────────────────
 
+class ApplyRecommendationsRequest(BaseModel):
+    resume_text: str
+    job_description: str = ""
+    selected_recommendations: list[str]
+
 class PreciseParseRequest(BaseModel):
     resume_text: str
 

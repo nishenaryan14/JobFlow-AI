@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
           job_description: jobDescription,
           required_skills: requiredSkills,
         }),
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(300000),
       });
 
       if (res.ok) {
@@ -72,7 +72,19 @@ function calculateATSLocally(
   // Find keywords present in JD
   const jdKeywords = techKeywords.filter((kw) => jdLower.includes(kw));
   // Add required skills
-  const allRequired = [...new Set([...jdKeywords, ...requiredSkills.map((s) => s.toLowerCase())])];
+  const allRequired = [...new Set([...(jdKeywords.length > 0 ? jdKeywords : []), ...requiredSkills.map((s) => s.toLowerCase())])];
+
+  // If we couldn't extract any meaningful keywords locally, just give a neutral score to avoid false penalties
+  if (allRequired.length === 0) {
+    return {
+      overallScore: 75,
+      keywordMatchPercent: 100,
+      matchedKeywords: [],
+      missingKeywords: [],
+      sectionScores: { skills: 80, experience: 80, education: 75 },
+      recommendations: ["Ensure your resume highlights the specific requirements mentioned in the job description."],
+    };
+  }
 
   // Check which are in resume
   const matched = allRequired.filter((kw) => resumeLower.includes(kw));
