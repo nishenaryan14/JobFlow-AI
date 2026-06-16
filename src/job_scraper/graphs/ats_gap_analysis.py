@@ -61,25 +61,27 @@ class GapScanOutput(BaseModel):
 
 @log_node("extract_jd_keywords")
 async def extract_jd_keywords(state: ATSGapState) -> dict:
-    """Extract ALL required and preferred keywords from the job description."""
-    llm = get_deepseek_chat()
+    """Extract required and preferred keywords from the job description using DeepSeek Reasoner."""
+    llm = get_deepseek_reasoner()
 
-    prompt = f"""Analyze this job description and extract ALL keywords that an ATS system
-would look for when scanning resumes. Include:
-
-- Required technical skills (programming languages, frameworks, tools)
-- Preferred/nice-to-have skills
-- Soft skills mentioned
-- Certifications or qualifications
-- Industry-specific terms
-- Action verbs associated with responsibilities
+    prompt = f"""Analyze this job description and extract key search terms, technologies, and competencies.
 
 Job Description:
 {state["job_description"]}
 
+CRITICAL FILTERING RULES:
+1. ONLY extract concrete hard skills, programming languages, frameworks, tools, systems, methodologies, and certifications.
+2. DO NOT extract soft skills (e.g., communication, teamwork, leadership, collaboration) or generic action verbs (e.g., develop, manage, build).
+3. DO NOT extract noise/filler words (e.g., years, experience, candidate, responsibilities, track record).
+4. Classify each extracted keyword category:
+   - "technical" = programming languages, frameworks, technical concepts, databases
+   - "tool" = developer tools, SaaS platforms, cloud services, libraries
+   - "certification" = certified credentials (e.g., AWS, PMP)
+   - "soft_skill" = ONLY extract if it is a highly specialized industry-standard domain competency (e.g., "Agile", "Scrum"), otherwise do not extract generic soft skills at all.
+
 For each keyword, classify its importance:
-- "critical" = explicitly required, deal-breaker if missing
-- "important" = strongly preferred or mentioned multiple times
+- "critical" = explicitly required tech/tool, a clear deal-breaker if missing
+- "important" = strongly preferred tech/tool or mentioned multiple times
 - "nice_to_have" = mentioned once or in preferred section
 
 Return a JSON object with:
@@ -197,7 +199,9 @@ For each suggestion:
 4. Remove any suggestions that would fabricate non-existent experience
 
 Also calculate the overall match percentage:
-- match_percentage = (matched_keywords count) / (total unique JD keywords) × 100
+- match_percentage = (matched hard-skills count) / (total unique hard-skills JD keywords) × 100
+  where hard-skills are keywords with category 'technical', 'tool', or 'certification'.
+  Do NOT include 'soft_skill' keywords or generic/behavioral competencies in the match_percentage calculation, as these must not affect the candidate's core ATS compatibility score.
 
 Return a JSON object with:
 - suggestions: array of objects with {{keyword, importance, section, suggestion, reasoning, rephrase_target, rephrase_result, action_type}}

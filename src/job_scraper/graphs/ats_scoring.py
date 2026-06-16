@@ -38,14 +38,17 @@ Resume:
 
 Perform TWO tasks:
 
-TASK 1 — JD Analysis: Extract required skills, ATS-critical keywords,
-qualifications, and responsibilities from the job description.
+TASK 1 — JD Analysis: Extract ONLY concrete technical skills, languages, frameworks, developer tools, databases, cloud systems, technical methodologies, and certifications from the job description. 
+* DO NOT extract soft skills (e.g. communication, teamwork, leadership, cross-functional collaboration).
+* DO NOT extract generic resume vocabulary (e.g. years, experience, developer, engineer, candidate).
 
-TASK 2 — ATS Scoring: Using the extracted requirements, score the resume:
-- **Keyword Match** — What percentage of ATS keywords from the JD appear in the resume?
-- **Skills Alignment** — How well do resume skills match required skills?
-- **Experience Relevance** — Does the experience align with responsibilities?
-- **Section Structure** — Does the resume have proper ATS-friendly sections?
+TASK 2 — ATS Scoring: Using the extracted hard requirements, score the resume:
+* **Keyword Match** — What percentage of the extracted technical keywords from TASK 1 appear in the resume? (This must strictly measure concrete hard skills).
+* **Skills Alignment** — How well do the candidate's core technologies align with the role?
+* **Experience Relevance** — Does the technical experience align with the responsibilities?
+* **Section Structure** — Does the resume have proper ATS-friendly sections?
+
+CRITICAL: The presence or absence of soft skills (e.g. communication, collaboration) or generic filler verbs must NOT affect the keywordMatchPercent, overallScore, or sectionScores. Focus 100% on hard technical qualifications, tools, and certifications.
 
 Return a JSON object with:
 - overallScore (0-100)
@@ -59,7 +62,7 @@ Return a JSON object with:
         llm=llm,
         prompt=prompt,
         output_schema=ATSScoreOutput,
-        system_prompt="You are an ATS scoring expert. Analyze the JD and score the resume. Output only valid JSON.",
+        system_prompt="You are an ATS scoring expert. Analyze the JD and score the resume. Focus strictly on hard technical skills. Output only valid JSON.",
     )
 
     return {"score": score.model_dump()}
