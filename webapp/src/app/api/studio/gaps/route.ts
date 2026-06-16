@@ -81,19 +81,7 @@ function extractJDKeywords(jd: string): Array<{ keyword: string; importance: str
     }
   }
 
-  // Also extract capitalized multi-word terms (likely tools/frameworks)
-  const capitalizedTerms = jd.match(/[A-Z][a-zA-Z0-9+#.-]+/g) || [];
-  for (const term of capitalizedTerms) {
-    const termClean = term.replace(/^[.,\/#!$%\^&\*;:{}=\-_`~()]+|[.,\/#!$%\^&\*;:{}=\-_`~()]+$/g, "");
-    const termLower = termClean.toLowerCase();
-    if (termLower.length >= 3 && !STOP_WORDS.has(termLower) && !keywords.find(k => k.keyword === termLower)) {
-      const regex = new RegExp(`\\b${termClean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
-      const matches = jd.match(regex);
-      if (matches && matches.length >= 2) {
-        keywords.push({ keyword: termLower, importance: "important", count: matches.length });
-      }
-    }
-  }
+
 
   // Sort by count descending
   keywords.sort((a, b) => b.count - a.count);
