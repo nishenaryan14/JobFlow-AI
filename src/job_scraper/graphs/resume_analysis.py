@@ -13,7 +13,7 @@ No fallback extraction needed — the pydantic model is enforced by the LLM.
 from langgraph.graph import StateGraph, START, END
 
 from job_scraper.graphs.state import ResumeAnalysisState
-from job_scraper.graphs.llm_factory import get_deepseek_chat
+from job_scraper.graphs.llm_factory import get_deepseek_chat, get_deepseek_reasoner
 from job_scraper.graphs.error_handling import call_llm_structured
 from job_scraper.graphs.tracing import log_node
 from job_scraper.models import ResumeParseOutput, ResumeAssessmentOutput
@@ -73,7 +73,7 @@ async def assess_skills(state: ResumeAnalysisState) -> dict:
     Takes the parsed resume data and adds: overallScore, strengths,
     weaknesses, and a professional summary.
     """
-    llm = get_deepseek_chat()
+    llm = get_deepseek_reasoner()
     parsed_data = state.get("parsed", {})
 
     prompt = f"""You have been given the parsed resume data below.

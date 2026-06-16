@@ -4,8 +4,9 @@ Every graph imports models from here instead of declaring its own.
 Changing a model, API key, or temperature is a one-line change.
 
 Supported models:
-  • DeepSeek Chat  — fast + cheap, used for search, extraction, parsing (Fallback: local Ollama)
-  • Gemini Flash   — strong reasoning, used for scoring, assessment, gap analysis (Fallback: local Ollama)
+  • DeepSeek Chat     — fast + cheap, used for extraction, parsing, search
+  • DeepSeek Reasoner — deep CoT reasoning, used for scoring, gap analysis, enhancement
+  • Gemini Flash      — strong reasoning, used as fallback for reasoner tasks
 """
 
 import os
@@ -35,6 +36,7 @@ def get_ollama_chat(model_name: str = "glm-5.1:cloud") -> ChatOpenAI:
 def get_deepseek_chat() -> ChatOpenAI:
     """DeepSeek Chat — fast, cheap, reliable for structured extraction.
 
+    Used for: keyword extraction, resume parsing, search queries, quick tasks.
     Falls back to local Ollama if USE_OLLAMA=true.
     """
     cloud_model = ChatOpenAI(
@@ -53,6 +55,39 @@ def get_deepseek_chat() -> ChatOpenAI:
         return ollama_model.with_fallbacks([cloud_model]) # type: ignore[return-value]
 
     return cloud_model
+
+
+@lru_cache(maxsize=1)
+def get_deepseek_reasoner() -> ChatOpenAI:
+    """DeepSeek Reasoner (R1) — heavy reasoning with Chain-of-Thought.
+
+    Used for: ATS gap analysis, resume enhancement, scoring, assessment.
+    Generates internal CoT before answering → significantly better results
+    on complex analytical tasks.
+
+    NOTE: temperature, top_p, penalties are IGNORED by this model.
+    Falls back to Gemini Flash → DeepSeek Chat if unavailable.
+    """
+    reasoner_model = ChatOpenAI(
+        model="deepseek-reasoner",
+        api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
+        base_url="https://api.deepseek.com",
+        temperature=0,  # Ignored by API but required by validator
+        max_tokens=16384,
+        max_retries=2,
+    )
+
+    # Fallback chain: Reasoner → Gemini Flash → DeepSeek Chat
+    gemini_fallback = get_gemini_flash()
+    chat_fallback = ChatOpenAI(
+        model="deepseek-chat",
+        api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
+        base_url="https://api.deepseek.com",
+        temperature=0,
+        max_retries=3,
+    )
+
+    return reasoner_model.with_fallbacks([gemini_fallback, chat_fallback])  # type: ignore[return-value]
 
 
 @lru_cache(maxsize=1)
@@ -76,4 +111,3 @@ def get_gemini_flash() -> ChatGoogleGenerativeAI:
         return ollama_model.with_fallbacks([cloud_model])  # type: ignore[return-value]
 
     return cloud_model
-

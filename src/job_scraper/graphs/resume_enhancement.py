@@ -15,7 +15,7 @@ import logging
 from langgraph.graph import StateGraph, START, END
 
 from job_scraper.graphs.state import ResumeEnhancementState
-from job_scraper.graphs.llm_factory import get_gemini_flash, get_deepseek_chat
+from job_scraper.graphs.llm_factory import get_deepseek_reasoner, get_deepseek_chat
 from job_scraper.graphs.error_handling import call_llm_text, call_llm_structured
 from job_scraper.graphs.tracing import log_node
 from job_scraper.models import EnhancementEvaluationOutput
@@ -28,7 +28,7 @@ logger = logging.getLogger("jobflow.graphs")
 @log_node("analyze_gaps")
 async def analyze_gaps(state: ResumeEnhancementState) -> dict:
     """Identify gaps between resume and target JD."""
-    llm = get_gemini_flash()
+    llm = get_deepseek_reasoner()
 
     prompt = f"""Analyze the candidate's resume against the target job description.
 Identify exactly what needs to change to maximize the candidate's chances.
@@ -64,7 +64,7 @@ async def rewrite_resume(state: ResumeEnhancementState) -> dict:
     On retry attempts, also incorporates evaluation feedback from the
     previous round to address specific quality issues.
     """
-    llm = get_gemini_flash()
+    llm = get_deepseek_reasoner()
     gap_analysis = state.get("gap_analysis", "")
     evaluation_feedback = state.get("evaluation_feedback", "")
 

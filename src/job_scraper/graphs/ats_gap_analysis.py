@@ -10,7 +10,7 @@ from typing import TypedDict
 
 from langgraph.graph import StateGraph, START, END
 
-from job_scraper.graphs.llm_factory import get_deepseek_chat, get_gemini_flash
+from job_scraper.graphs.llm_factory import get_deepseek_chat, get_deepseek_reasoner
 from job_scraper.graphs.error_handling import call_llm_structured
 from job_scraper.graphs.tracing import log_node
 from job_scraper.models import PreciseResumeData, KeywordSuggestion, ATSGapAnalysisOutput
@@ -173,7 +173,7 @@ Return a JSON object with:
 @log_node("classify_suggestions")
 async def classify_suggestions(state: ATSGapState) -> dict:
     """Rank and finalize suggestions with reasoning using Gemini Flash."""
-    llm = get_gemini_flash()
+    llm = get_deepseek_reasoner()
 
     suggestions_json = json.dumps(state.get("suggestions", []), indent=2, default=str)
     jd_keywords_json = json.dumps(state.get("jd_keywords", []), indent=2, default=str)

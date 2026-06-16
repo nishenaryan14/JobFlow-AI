@@ -10,7 +10,7 @@ Output:   {"score": <ATSScoreOutput dict>}
 from langgraph.graph import StateGraph, START, END
 
 from job_scraper.graphs.state import ATSScoringState
-from job_scraper.graphs.llm_factory import get_deepseek_chat
+from job_scraper.graphs.llm_factory import get_deepseek_reasoner
 from job_scraper.graphs.error_handling import call_llm_structured
 from job_scraper.graphs.tracing import log_node
 from job_scraper.models import ATSScoreOutput
@@ -25,7 +25,7 @@ async def score_ats(state: ATSScoringState) -> dict:
     Merged from the previous two-step (analyze_jd → score_match) pipeline
     to reduce latency and API costs.
     """
-    llm = get_deepseek_chat()
+    llm = get_deepseek_reasoner()
 
     prompt = f"""Analyze the job description and score the resume for ATS compatibility.
 
