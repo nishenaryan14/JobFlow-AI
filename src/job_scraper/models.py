@@ -162,3 +162,67 @@ class EnhancementEvaluationOutput(BaseModel):
     @classmethod
     def coerce_eval_lists(cls, v: Any) -> List[str]:
         return _coerce_str_list(v)
+
+
+# ── Resume Builder Studio Models ──────────────────────────────────────────────
+
+class ContactInfo(BaseModel):
+    name: str = ""
+    email: str = ""
+    phone: str = ""
+    linkedin: str = ""
+    github: str = ""
+    portfolio: str = ""
+
+class ExperienceItem(BaseModel):
+    title: str = ""
+    company: str = ""
+    location: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    bullets: List[str] = Field(default_factory=list)
+
+class EducationItem(BaseModel):
+    degree: str = ""
+    institution: str = ""
+    location: str = ""
+    year: str = ""
+    gpa: str = ""
+    honors: str = ""
+
+class SkillCategory(BaseModel):
+    name: str = ""
+    skills: List[str] = Field(default_factory=list)
+
+class ProjectItem(BaseModel):
+    name: str = ""
+    description: str = ""
+    technologies: List[str] = Field(default_factory=list)
+    url: str = ""
+    bullets: List[str] = Field(default_factory=list)
+
+class PreciseResumeData(BaseModel):
+    contact: ContactInfo = Field(default_factory=ContactInfo)
+    summary: str = ""
+    experience: List[ExperienceItem] = Field(default_factory=list)
+    education: List[EducationItem] = Field(default_factory=list)
+    skills: List[SkillCategory] = Field(default_factory=list)
+    projects: List[ProjectItem] = Field(default_factory=list)
+    certifications: List[str] = Field(default_factory=list)
+    languages: List[str] = Field(default_factory=list)
+
+class KeywordSuggestion(BaseModel):
+    keyword: str = ""
+    importance: str = "important"  # critical | important | nice_to_have
+    section: str = "skills"  # skills | experience | summary | projects
+    suggestion: str = ""  # exact text/action to take
+    reasoning: str = ""  # why this keyword matters
+    rephrase_target: str = ""  # if rephrasing, the original bullet to modify
+    rephrase_result: str = ""  # the rephrased version
+    action_type: str = "add"  # add | rephrase
+
+class ATSGapAnalysisOutput(BaseModel):
+    suggestions: List[KeywordSuggestion] = Field(default_factory=list)
+    jd_keywords: List[str] = Field(default_factory=list)
+    matched_keywords: List[str] = Field(default_factory=list)
+    match_percentage: int = 0

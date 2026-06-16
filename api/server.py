@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 from typing import Optional
 from sse_starlette.sse import EventSourceResponse
@@ -72,6 +72,21 @@ class AutoApplyRequestEndpoint(BaseModel):
     candidate_email: str
     candidate_phone: str
     candidate_linkedin: Optional[str] = None
+
+
+# ── Resume Studio Models ──────────────────────────────────────────────────────
+
+class PreciseParseRequest(BaseModel):
+    resume_text: str
+
+class ATSGapRequest(BaseModel):
+    resume_data: dict
+    job_description: str
+
+class GenerateResumeRequest(BaseModel):
+    resume_data: dict
+    template: str = "modern"
+    format: str = "pdf"
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -558,6 +573,95 @@ def _fallback_enhance(resume_text: str, missing_keywords: list) -> dict:
     except Exception as exc:
         latex_code = f"% LaTeX generation failed: {exc}"
     return {"enhancedResume": enhanced, "latexTemplate": latex_code, "changes": changes}
+
+
+# ── Resume Studio Endpoints ───────────────────────────────────────────────────
+
+@app.post("/parse-resume-precise")
+async def parse_resume_precise(req: PreciseParseRequest):
+    """Precise resume parsing — extracts every detail for the form editor."""
+    from job_scraper.graphs.llm_factory import get_gemini_flash
+    from job_scraper.graphs.error_handling import call_llm_structured
+    from job_scraper.models import PreciseResumeData
+
+    llm = get_gemini_flash()
+    prompt = f"""You are an expert resume parser. Extract EVERY detail from this resume into structured JSON.
+
+CRITICAL RULES:
+- Extract EVERY bullet point VERBATIM — do NOT summarize or shorten
+- Extract exact dates (e.g. "Jan 2023 - Present", "2021 - 2023")
+- Categorize skills by type (Languages, Frameworks, Databases, DevOps, Tools, AI/ML, etc.)
+- If a field is not found, use empty string or empty list — NEVER hallucinate
+- Preserve original wording for all descriptions and bullet points
+- Extract ALL experience entries, not just recent ones
+- Extract ALL projects, certifications, and languages mentioned
+
+RESUME TEXT:
+{req.resume_text[:8000]}"""
+
+    try:
+        result = await call_llm_structured(
+            llm=llm,
+            prompt=prompt,
+            output_schema=PreciseResumeData,
+            system_prompt="You are a precise resume parser. Output valid JSON matching the exact schema. Extract everything verbatim.",
+            max_retries=2,
+        )
+        return result.model_dump()
+    except Exception as exc:
+        print(f"[parse-resume-precise] LLM parsing failed: {exc}")
+        return {"error": str(exc)}
+
+
+@app.post("/analyze-ats-gaps")
+async def analyze_ats_gaps(req: ATSGapRequest):
+    """ATS gap analysis — identifies missing keywords and suggests additions/rephrases."""
+    try:
+        from job_scraper.graphs.ats_gap_analysis import ats_gap_graph
+
+        result = await ats_gap_graph.ainvoke({
+            "resume_data": req.resume_data,
+            "job_description": req.job_description,
+        })
+        return {
+            "suggestions": result.get("suggestions", []),
+            "jd_keywords": result.get("jd_keywords", []),
+            "matched_keywords": result.get("matched_keywords", []),
+            "match_percentage": result.get("match_percentage", 0),
+        }
+    except Exception as exc:
+        print(f"[analyze-ats-gaps] Error: {exc}")
+        import traceback; traceback.print_exc()
+        return {"error": str(exc), "suggestions": [], "jd_keywords": [], "matched_keywords": [], "match_percentage": 0}
+
+
+@app.post("/generate-resume")
+async def generate_resume(req: GenerateResumeRequest):
+    """Generate a formatted resume as PDF or DOCX from structured data + template."""
+    try:
+        from job_scraper.graphs.resume_templates import generate_pdf, generate_docx, render_resume_html
+
+        if req.format == "pdf":
+            pdf_bytes = generate_pdf(req.resume_data, req.template)
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="resume_{req.template}.pdf"'},
+            )
+        elif req.format == "docx":
+            docx_bytes = generate_docx(req.resume_data, req.template)
+            return Response(
+                content=docx_bytes,
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                headers={"Content-Disposition": f'attachment; filename="resume_{req.template}.docx"'},
+            )
+        else:
+            html = render_resume_html(req.resume_data, req.template)
+            return {"html": html}
+    except Exception as exc:
+        print(f"[generate-resume] Error: {exc}")
+        import traceback; traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(exc)})
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

@@ -15,12 +15,14 @@ import {
   Zap,
   Activity,
   Sun,
-  Moon
+  Moon,
+  Wand2
 } from "lucide-react";
 
 const links = [
   { href: "/", label: "Overview", icon: Home },
   { href: "/analyze", label: "AI Analysis", icon: FileSearch },
+  { href: "/studio", label: "Resume Studio", icon: Wand2 },
   { href: "/jobs", label: "Job Matches", icon: Briefcase },
   { href: "/tracker", label: "Task Tracker", icon: KanbanSquare },
 ];
