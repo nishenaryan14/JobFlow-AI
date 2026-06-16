@@ -21,6 +21,41 @@ const TECH_KEYWORDS = new Set([
   "project management", "stakeholder management",
 ]);
 
+const STOP_WORDS = new Set([
+  "the", "you", "your", "they", "them", "he", "she", "it", "we", "our", "us",
+  "what", "who", "whom", "this", "that", "these", "those", "here", "there",
+  "which", "whose", "where", "when", "why", "how", "all", "any", "both", "each",
+  "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only",
+  "own", "same", "so", "than", "too", "very", "can", "will", "just", "should",
+  "now", "would", "could", "must", "with", "without", "about", "into", "through",
+  "during", "before", "after", "above", "below", "like", "sets", "apart", "join",
+  "help", "work", "client", "opportunity", "associate", "firm", "brand", "role",
+  "team", "needs", "scope", "value", "success", "pwc", "acceleration", "center",
+  "india", "learn", "grow", "every", "experience", "years", "degree", "bachelor",
+  "bachelors", "english", "written", "oral", "proficiency", "required", "related",
+  "field", "science", "engineering", "statistics", "mathematics", "computer",
+  "advisory", "assurance", "tax", "business", "services", "data", "analytics",
+  "opportunites", "fast-paced", "environment", "solutions", "insights", "datasets",
+  "decision-making", "problems", "projects", "knowledge", "deliver", "quality",
+  "inspiring", "makes", "difference", "day", "focus", "utilizing", "advanced",
+  "analytical", "techniques", "extract", "drive", "practice", "leverage",
+  "manipulation", "visualization", "statistical", "modeling", "support",
+  "curiosity", "contributing", "engagement", "build", "exposed", "connections",
+  "manage", "inspire", "others", "personal", "deepening", "resources", "technology",
+  "adapt", "variety", "members", "presents", "challenges", "ownership",
+  "consistently", "delivering", "doors", "navigate", "ambiguity", "embracing",
+  "moments", "responsibilities", "algorithmic", "processes", "engaging",
+  "research", "innovation", "optimize", "operations", "implementing", "machine",
+  "predictive", "capabilities", "programming", "automation", "tasks", "gathering",
+  "discern", "patterns", "inform", "strategies", "must", "sets", "apart", "gcp",
+  "sas", "predictive", "building", "deploying", "contribute", "interfaces",
+  "frameworks", "equivalent", "develop", "apis", "serve", "users", "familiarity",
+  "containerized", "workflows", "demonstrating", "software", "derive", "actionable",
+  "development", "processing", "adapting", "diverse", "client's", "client portfolio",
+  "global", "global teams", "connected", "collaboration", "hands-on", "learning",
+  "cutting-edge", "tools", "inclusive", "culture", "inspiring work", "makes a difference"
+]);
+
 interface ResumeData {
   contact?: { name?: string };
   summary?: string;
@@ -47,11 +82,12 @@ function extractJDKeywords(jd: string): Array<{ keyword: string; importance: str
   }
 
   // Also extract capitalized multi-word terms (likely tools/frameworks)
-  const capitalizedTerms = jd.match(/[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*/g) || [];
+  const capitalizedTerms = jd.match(/[A-Z][a-zA-Z0-9+#.-]+/g) || [];
   for (const term of capitalizedTerms) {
-    const termLower = term.toLowerCase();
-    if (termLower.length >= 3 && !keywords.find(k => k.keyword === termLower)) {
-      const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
+    const termClean = term.replace(/^[.,\/#!$%\^&\*;:{}=\-_`~()]+|[.,\/#!$%\^&\*;:{}=\-_`~()]+$/g, "");
+    const termLower = termClean.toLowerCase();
+    if (termLower.length >= 3 && !STOP_WORDS.has(termLower) && !keywords.find(k => k.keyword === termLower)) {
+      const regex = new RegExp(`\\b${termClean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
       const matches = jd.match(regex);
       if (matches && matches.length >= 2) {
         keywords.push({ keyword: termLower, importance: "important", count: matches.length });
