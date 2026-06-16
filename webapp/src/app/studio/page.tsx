@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Upload,
   FileText,
@@ -15,6 +15,8 @@ import {
   ScanSearch,
   FileCode,
   Check,
+  FilePlus2,
+  RotateCcw,
 } from "lucide-react";
 
 import ResumeForm from "@/components/ResumeForm";
@@ -24,6 +26,19 @@ import KeywordSuggestionsComponent from "@/components/KeywordSuggestions";
 import type { KeywordSuggestion } from "@/components/KeywordSuggestions";
 import TemplatePicker from "@/components/TemplatePicker";
 import ResumeDropzone from "@/components/ResumeDropzone";
+
+const STORAGE_KEY = "jobflow_studio_state";
+
+interface PersistedState {
+  resumeData: PreciseResumeData | null;
+  resumeFileName: string;
+  jobDescription: string;
+  suggestions: KeywordSuggestion[];
+  matchedKeywords: string[];
+  matchPercentage: number;
+  selectedTemplate: "modern" | "classic" | "minimal" | "ats";
+  resumeUploaded: boolean;
+}
 
 export default function StudioPage() {
   const [resumeData, setResumeData] = useState<PreciseResumeData | null>(null);
@@ -42,6 +57,63 @@ export default function StudioPage() {
   const [error, setError] = useState<string | null>(null);
   const [parseStage, setParseStage] = useState(0);
   const parseInterval = useRef<NodeJS.Timeout | null>(null);
+  const isHydrated = useRef(false);
+
+  // ── Restore state from localStorage on mount ────────────────────────────────
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const state: PersistedState = JSON.parse(saved);
+        if (state.resumeData) setResumeData(state.resumeData);
+        if (state.resumeFileName) setResumeFileName(state.resumeFileName);
+        if (state.jobDescription) setJobDescription(state.jobDescription);
+        if (state.suggestions) setSuggestions(state.suggestions);
+        if (state.matchedKeywords) setMatchedKeywords(state.matchedKeywords);
+        if (state.matchPercentage) setMatchPercentage(state.matchPercentage);
+        if (state.selectedTemplate) setSelectedTemplate(state.selectedTemplate);
+        if (state.resumeUploaded) setResumeUploaded(state.resumeUploaded);
+      }
+    } catch {
+      // Ignore corrupt localStorage
+    }
+    isHydrated.current = true;
+  }, []);
+
+  // ── Save state to localStorage on every change ──────────────────────────────
+  useEffect(() => {
+    if (!isHydrated.current) return; // Don't save during initial hydration
+    const state: PersistedState = {
+      resumeData,
+      resumeFileName,
+      jobDescription,
+      suggestions,
+      matchedKeywords,
+      matchPercentage,
+      selectedTemplate,
+      resumeUploaded,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Storage full — silently fail
+    }
+  }, [resumeData, resumeFileName, jobDescription, suggestions, matchedKeywords, matchPercentage, selectedTemplate, resumeUploaded]);
+
+  // ── Start new resume (clear everything) ─────────────────────────────────────
+  const handleStartNew = useCallback(() => {
+    setResumeData(null);
+    setResumeUploaded(false);
+    setResumeFileName("");
+    setJobDescription("");
+    setSuggestions([]);
+    setMatchedKeywords([]);
+    setMatchPercentage(0);
+    setSelectedTemplate("modern");
+    setError(null);
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem("resumeText");
+  }, []);
 
   // Advance parsing stages for animation
   useEffect(() => {
@@ -329,35 +401,39 @@ export default function StudioPage() {
 
       {resumeUploaded && resumeData && (
         <>
-          {/* File badge */}
-          <div className="studio-fade-in" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-            <div
-              className="badge badge-high"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 14px",
-              }}
-            >
-              <FileText size={14} />
-              {resumeFileName}
+          {/* File badge + New Resume */}
+          <div className="studio-fade-in" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                className="badge badge-high"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 14px",
+                }}
+              >
+                <FileText size={14} />
+                {resumeFileName}
+              </div>
+              <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>
+                Session auto-saved
+              </span>
             </div>
             <button
               className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setResumeUploaded(false);
-                setResumeData(null);
-                setResumeFileName("");
-                setSuggestions([]);
-                setMatchedKeywords([]);
-                setMatchPercentage(0);
-                setJobDescription("");
+              onClick={handleStartNew}
+              style={{
+                fontSize: "var(--font-xs)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border-primary)",
               }}
-              style={{ fontSize: "var(--font-xs)" }}
             >
-              <Upload size={12} />
-              Upload Different
+              <FilePlus2 size={13} />
+              Start New Resume
             </button>
           </div>
 
