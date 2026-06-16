@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Upload,
   FileText,
@@ -11,6 +11,10 @@ import {
   Loader2,
   CheckCircle2,
   X,
+  Brain,
+  ScanSearch,
+  FileCode,
+  Check,
 } from "lucide-react";
 
 import ResumeForm from "@/components/ResumeForm";
@@ -36,6 +40,26 @@ export default function StudioPage() {
     "modern" | "classic" | "minimal" | "ats"
   >("modern");
   const [error, setError] = useState<string | null>(null);
+  const [parseStage, setParseStage] = useState(0);
+  const parseInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Advance parsing stages for animation
+  useEffect(() => {
+    if (isParsing) {
+      setParseStage(0);
+      let stage = 0;
+      parseInterval.current = setInterval(() => {
+        stage++;
+        if (stage <= 4) setParseStage(stage);
+      }, 800);
+    } else {
+      if (parseInterval.current) clearInterval(parseInterval.current);
+      if (resumeUploaded) setParseStage(5);
+    }
+    return () => {
+      if (parseInterval.current) clearInterval(parseInterval.current);
+    };
+  }, [isParsing, resumeUploaded]);
 
   // Handle resume upload and parse into structured data
   const handleResumeUploaded = async (
@@ -262,34 +286,51 @@ export default function StudioPage() {
       )}
 
       {isParsing && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 12,
-            padding: 40,
-            marginBottom: 24,
-          }}
-        >
-          <Loader2 size={24} className="spin-icon" />
-          <span style={{ color: "var(--text-secondary)" }}>
-            Parsing resume structure...
-          </span>
+        <div className="studio-parse-animation">
+          <div className="parse-pipeline">
+            {[
+              { icon: <Upload size={18} />, label: "Uploading Resume", stage: 0 },
+              { icon: <ScanSearch size={18} />, label: "Connecting to AI Engine", stage: 1 },
+              { icon: <Brain size={18} />, label: "Extracting Every Detail", stage: 2 },
+              { icon: <FileCode size={18} />, label: "Structuring Data", stage: 3 },
+              { icon: <Check size={18} />, label: "Complete", stage: 4 },
+            ].map((step) => (
+              <div
+                key={step.stage}
+                className={`parse-step ${
+                  parseStage > step.stage
+                    ? "parse-step-done"
+                    : parseStage === step.stage
+                      ? "parse-step-active"
+                      : "parse-step-pending"
+                }`}
+              >
+                <div className="parse-step-icon">
+                  {parseStage > step.stage ? (
+                    <CheckCircle2 size={18} />
+                  ) : parseStage === step.stage ? (
+                    <Loader2 size={18} className="spin-icon" />
+                  ) : (
+                    step.icon
+                  )}
+                </div>
+                <span className="parse-step-label">{step.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="parse-progress-bar">
+            <div
+              className="parse-progress-fill"
+              style={{ width: `${Math.min((parseStage + 1) * 20, 100)}%` }}
+            />
+          </div>
         </div>
       )}
 
       {resumeUploaded && resumeData && (
         <>
           {/* File badge */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 20,
-            }}
-          >
+          <div className="studio-fade-in" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <div
               className="badge badge-high"
               style={{
@@ -321,7 +362,7 @@ export default function StudioPage() {
           </div>
 
           {/* Three-panel layout */}
-          <div className="studio-layout">
+          <div className="studio-layout studio-slide-up">
             {/* LEFT PANEL - Resume Form */}
             <div className="studio-left">
               <ResumeForm data={resumeData} onChange={setResumeData} />

@@ -2671,3 +2671,178 @@ a:hover {
     max-height: none;
   }
 }
+
+/* ── Studio Animations ───────────────────────────────────────────── */
+
+/* Spin icon (used by Loader2) */
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Fade in */
+.studio-fade-in {
+  animation: studioFadeIn 0.5s ease-out both;
+}
+@keyframes studioFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Slide up */
+.studio-slide-up {
+  animation: studioSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.15s;
+}
+@keyframes studioSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Parsing Pipeline Animation */
+.studio-parse-animation {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px 24px;
+  margin-bottom: 24px;
+  animation: studioFadeIn 0.4s ease-out both;
+}
+
+.parse-pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.parse-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+.parse-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.parse-step-pending {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+.parse-step-pending .parse-step-icon {
+  background: rgba(255,255,255,0.04);
+}
+
+.parse-step-active {
+  color: var(--accent-primary);
+  background: rgba(55, 114, 255, 0.08);
+  box-shadow: 0 0 20px rgba(55, 114, 255, 0.15);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+.parse-step-active .parse-step-icon {
+  background: rgba(55, 114, 255, 0.15);
+  color: var(--accent-primary);
+}
+
+.parse-step-done {
+  color: #4ade80;
+}
+.parse-step-done .parse-step-icon {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(55, 114, 255, 0.15); }
+  50% { box-shadow: 0 0 30px rgba(55, 114, 255, 0.3); }
+}
+
+.parse-step-label {
+  white-space: nowrap;
+}
+
+/* Progress bar */
+.parse-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.parse-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(55, 114, 255, 0.4);
+}
+
+/* Glass card hover animation boost */
+.studio-layout .glass-card {
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+.studio-layout .glass-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Form section expand animation */
+.form-section-content {
+  animation: formExpand 0.3s ease-out both;
+}
+@keyframes formExpand {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+
+/* Template card selected glow pulse */
+.template-card.selected {
+  animation: templateGlow 2s ease-in-out infinite;
+}
+@keyframes templateGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(55, 114, 255, 0.2); }
+  50% { box-shadow: 0 0 35px rgba(55, 114, 255, 0.35); }
+}
+
+/* Download bar button hover */
+.download-bar .btn {
+  transition: all var(--transition-base);
+}
+.download-bar .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(55, 114, 255, 0.3);
+}
+
+/* Keyword card entrance */
+.keyword-card {
+  animation: cardSlideIn 0.35s ease-out both;
+}
+@keyframes cardSlideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Preview paper container */
+.preview-paper {
+  min-height: 500px;
+  max-height: 900px;
+}
+
