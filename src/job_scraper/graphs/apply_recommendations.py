@@ -1,7 +1,7 @@
 """Apply Recommendations Graph — Intelligently integrates selected recommendations into the resume.
 
 Pipeline: apply_recommendations_node → END
-Input:    {"resume_text": <str>, "job_description": <str>, "selected_recommendations": <list[str]>}
+Input:    {"resume_text": <str>, "job_description": <str>, "selected_keywords": <list[str]>}
 Output:   {"enhanced_resume": <str>}
 """
 
@@ -22,7 +22,7 @@ logger = logging.getLogger("jobflow.graphs")
 class ApplyRecommendationsState(TypedDict, total=False):
     resume_text: str
     job_description: str
-    selected_recommendations: List[str]
+    selected_keywords: List[str]
     enhanced_resume: str
 
 
@@ -33,10 +33,10 @@ async def apply_recommendations_node(state: ApplyRecommendationsState) -> dict:
     """Intelligently place selected recommendations into the resume."""
     llm = get_deepseek_reasoner()
 
-    recs_formatted = "\n".join(f"- {rec}" for rec in state.get("selected_recommendations", []))
+    recs_formatted = "\n".join(f"- {rec}" for rec in state.get("selected_keywords", []))
 
-    prompt = f"""You are an expert resume writer. The candidate has selected specific improvement recommendations to apply to their resume.
-Analyze the resume and determine the most logical and organic place to integrate each recommendation.
+    prompt = f"""You are an expert resume writer. The candidate has selected specific missing keywords to embed into their resume.
+Analyze the resume and determine the most logical and organic place to integrate each keyword.
 
 Original Resume:
 {state["resume_text"]}
@@ -44,15 +44,16 @@ Original Resume:
 Target Job Description (for context):
 {state.get("job_description", "")}
 
-Selected Recommendations to Apply:
+Selected Keywords to Apply:
 {recs_formatted}
 
 RULES:
-1. Do not just append a 'Recommendations' section at the bottom.
-2. Integrate each recommendation naturally into the existing sections (e.g. modify an existing bullet point in the Experience section, add a new bullet, re-order sections as requested, or add keywords to the Skills section).
-3. Do not fabricate experience — only reframe existing roles or add generic accomplishments that fit the context.
-4. Output ONLY the updated resume in clean Markdown format. No JSON wrapping. No explanations. No thinking out loud.
-5. Make sure the resume fits on a single page, keeping it concise and professional.
+1. Do not just append a list of keywords at the bottom of the resume.
+2. For each accepted keyword, reason about the most logical place it belongs in the provided resume.
+3. Find the specific experience bullet point, project, or skills section where it fits most naturally. Rewrite that specific section to gracefully embed the keyword.
+4. Do not fabricate experience — only reframe existing roles or add them to the skills matrix if they fit the context.
+5. Output ONLY the updated resume in clean Markdown format. No JSON wrapping. No explanations. No thinking out loud.
+6. Make sure the resume fits on a single page, keeping it concise and professional.
 """
 
     result = await call_llm_text(

@@ -79,7 +79,7 @@ class AutoApplyRequestEndpoint(BaseModel):
 class ApplyRecommendationsRequest(BaseModel):
     resume_text: str
     job_description: str = ""
-    selected_recommendations: list[str]
+    selected_keywords: list[str]
 
 class PreciseParseRequest(BaseModel):
     resume_text: str
@@ -614,8 +614,33 @@ RESUME TEXT:
         )
         return result.model_dump()
     except Exception as exc:
-        print(f"[parse-resume-precise] LLM parsing failed: {exc}")
+        print(f"[parse-resume-precise] Error: {exc}")
         return {"error": str(exc)}
+
+# ── Apply Recommendations ─────────────────────────────────────────────────────
+
+@app.post("/apply-recommendations")
+async def apply_recommendations(req: ApplyRecommendationsRequest):
+    """Run the Apply Recommendations LangGraph pipeline."""
+    try:
+        from job_scraper.graphs.apply_recommendations import apply_recommendations_graph
+
+        result = await apply_recommendations_graph.ainvoke({
+            "resume_text": req.resume_text,
+            "job_description": req.job_description,
+            "selected_keywords": req.selected_keywords,
+        })
+
+        enhanced_md = result.get("enhanced_resume", req.resume_text)
+
+        return {
+            "enhancedResume": enhanced_md,
+        }
+
+    except Exception as exc:
+        from fastapi import HTTPException
+        print(f"[apply-recommendations] Error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/analyze-ats-gaps")

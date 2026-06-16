@@ -90,7 +90,7 @@ export default function JobDetailPage() {
   const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [autoApplyStatus, setAutoApplyStatus] = useState<string | null>(null);
 
-  const [selectedRecommendations, setSelectedRecommendations] = useState<string[]>([]);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [isApplyingRecs, setIsApplyingRecs] = useState(false);
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function JobDetailPage() {
   };
 
   const applyRecommendations = async () => {
-    if (!job || selectedRecommendations.length === 0) return;
+    if (!job || selectedKeywords.length === 0) return;
     setIsApplyingRecs(true);
     try {
       const resumeText = sessionStorage.getItem("resumeText") || "";
@@ -185,13 +185,13 @@ export default function JobDetailPage() {
         body: JSON.stringify({
           resumeText,
           jobDescription: job.description || `${job.title} at ${job.company}`,
-          selectedRecommendations,
+          selected_keywords: selectedKeywords,
         }),
       });
-      if (!res.ok) throw new Error("Apply recommendations failed");
+      if (!res.ok) throw new Error("Apply keywords failed");
       const data = await res.json();
       setEnhancedResume(data.enhancedResume);
-      setEnhanceChanges(["Applied selected recommendations: " + selectedRecommendations.join(", ")]);
+      setEnhanceChanges(["Applied selected keywords: " + selectedKeywords.join(", ")]);
       setShowComparison(true);
     } catch (err) {
       console.error(err);
@@ -200,9 +200,9 @@ export default function JobDetailPage() {
     }
   };
 
-  const toggleRecommendation = (rec: string) => {
-    setSelectedRecommendations((prev) =>
-      prev.includes(rec) ? prev.filter((r) => r !== rec) : [...prev, rec]
+  const toggleKeyword = (kw: string) => {
+    setSelectedKeywords((prev) =>
+      prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
     );
   };
 
@@ -530,13 +530,42 @@ export default function JobDetailPage() {
               >
                 ❌ Missing Keywords
               </h3>
-              <div className="keyword-list">
+              <div className="keyword-list" style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {atsResult.missingKeywords?.map((k) => (
-                  <span key={k} className="keyword-missing">
+                  <div
+                    key={k}
+                    onClick={() => toggleKeyword(k)}
+                    className="keyword-missing"
+                    style={{
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      opacity: selectedKeywords.includes(k) ? 1 : 0.7,
+                      border: selectedKeywords.includes(k) ? "2px solid var(--accent-primary)" : "",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedKeywords.includes(k)}
+                      onChange={() => {}}
+                      style={{ cursor: "pointer" }}
+                    />
                     {k}
-                  </span>
+                  </div>
                 ))}
               </div>
+              
+              {selectedKeywords.length > 0 && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginTop: 12, width: "100%" }}
+                  onClick={applyRecommendations}
+                  disabled={isApplyingRecs}
+                >
+                  {isApplyingRecs ? "Applying to Resume..." : `Apply ${selectedKeywords.length} Keywords to Resume`}
+                </button>
+              )}
 
               {atsResult.recommendations?.length > 0 && (
                 <>
@@ -561,38 +590,17 @@ export default function JobDetailPage() {
                     {atsResult.recommendations.map((r, i) => (
                       <li
                         key={i}
-                        onClick={() => toggleRecommendation(r)}
                         style={{
                           fontSize: "var(--font-sm)",
                           color: "var(--text-secondary)",
                           paddingLeft: 14,
                           borderLeft: "2px solid var(--accent-primary)",
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "8px",
-                          cursor: "pointer",
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedRecommendations.includes(r)}
-                          onChange={() => {}} // Handled by li onClick
-                          style={{ marginTop: "3px", cursor: "pointer" }}
-                        />
-                        <span>{r}</span>
+                        {r}
                       </li>
                     ))}
                   </ul>
-                  {selectedRecommendations.length > 0 && (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      style={{ marginTop: 12, width: "100%" }}
-                      onClick={applyRecommendations}
-                      disabled={isApplyingRecs}
-                    >
-                      {isApplyingRecs ? "Applying to Resume..." : `Apply ${selectedRecommendations.length} Recommendations to Resume`}
-                    </button>
-                  )}
                 </>
               )}
             </div>

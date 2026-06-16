@@ -35,8 +35,7 @@ from typing import List
 class JDKeyword(BaseModel):
     keyword: str = ""
     importance: str = "important"  # critical | important | nice_to_have
-    category: str = "technical"  # technical | soft_skill | certification | tool
-
+    category: str = "technical"  # technical | certification | tool | methodology
 
 class JDKeywordsOutput(BaseModel):
     keywords: List[JDKeyword] = Field(default_factory=list)
@@ -69,15 +68,17 @@ async def extract_jd_keywords(state: ATSGapState) -> dict:
 Job Description:
 {state["job_description"]}
 
-CRITICAL FILTERING RULES:
+CRITICAL FILTERING RULES - YOU MUST OBEY THESE STRICTLY:
 1. ONLY extract concrete hard skills, programming languages, frameworks, tools, systems, methodologies, and certifications.
-2. DO NOT extract soft skills (e.g., communication, teamwork, leadership, collaboration) or generic action verbs (e.g., develop, manage, build).
-3. DO NOT extract noise/filler words (e.g., years, experience, candidate, responsibilities, track record).
-4. Classify each extracted keyword category:
+2. ABSOLUTELY DO NOT extract soft skills (e.g., communication, teamwork, leadership, collaboration, curiosity, inclusive culture).
+3. ABSOLUTELY DO NOT extract generic action verbs or descriptions (e.g., develop, manage, build, advanced analytical techniques, data-driven decision-making).
+4. ABSOLUTELY DO NOT extract noise/filler words (e.g., years, experience, candidate, responsibilities, track record, diverse client portfolio).
+5. If a phrase is a generic competency like "statistical modeling", "data manipulation", or "extract insights", DO NOT extract it. Only extract specific named tools or concrete academic/technical domains.
+6. Classify each extracted keyword category:
    - "technical" = programming languages, frameworks, technical concepts, databases
    - "tool" = developer tools, SaaS platforms, cloud services, libraries
    - "certification" = certified credentials (e.g., AWS, PMP)
-   - "soft_skill" = ONLY extract if it is a highly specialized industry-standard domain competency (e.g., "Agile", "Scrum"), otherwise do not extract generic soft skills at all.
+   - "methodology" = specific named methodologies (e.g., Agile, Scrum, Kanban)
 
 For each keyword, classify its importance:
 - "critical" = explicitly required tech/tool, a clear deal-breaker if missing
@@ -86,19 +87,29 @@ For each keyword, classify its importance:
 
 Return a JSON object with:
 - keywords: array of objects with {{keyword, importance, category}}
-  where category is one of: technical, soft_skill, certification, tool"""
+  where category is one of: technical, certification, tool, methodology"""
 
     result = await call_llm_structured(
         llm=llm,
         prompt=prompt,
         output_schema=JDKeywordsOutput,
-        system_prompt="You are an ATS keyword extraction expert. Extract every relevant keyword from the job description. Output only valid JSON.",
+        system_prompt="You are a strict ATS parser. You only extract hard technical nouns. You never extract verbs, adjectives, or soft skills. Output only valid JSON.",
     )
 
-    jd_keywords = [
-        {"keyword": kw.keyword, "importance": kw.importance, "category": kw.category}
-        for kw in result.keywords
-    ]
+    jd_keywords = []
+    # Post-processing filter to guarantee no junk slips through
+    forbidden_words = {"experience", "years", "team", "communication", "leadership", "curiosity", "inclusive", "collaboration", "diverse"}
+    for kw in result.keywords:
+        text = kw.keyword.lower()
+        if any(bad in text for bad in forbidden_words):
+            continue
+        if len(text.split()) > 4: # Dropping overly long generic phrases
+            continue
+        jd_keywords.append({
+            "keyword": kw.keyword,
+            "importance": kw.importance,
+            "category": kw.category
+        })
 
     return {"jd_keywords": jd_keywords}
 
