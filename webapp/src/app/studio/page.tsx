@@ -17,6 +17,8 @@ import {
   Check,
   FilePlus2,
   RotateCcw,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 import ResumeForm from "@/components/ResumeForm";
@@ -26,6 +28,7 @@ import KeywordSuggestionsComponent from "@/components/KeywordSuggestions";
 import type { KeywordSuggestion } from "@/components/KeywordSuggestions";
 import TemplatePicker from "@/components/TemplatePicker";
 import ResumeDropzone from "@/components/ResumeDropzone";
+import CommandCenter from "@/components/CommandCenter";
 
 const STORAGE_KEY = "jobflow_studio_state";
 
@@ -59,6 +62,9 @@ export default function StudioPage() {
   const parseInterval = useRef<NodeJS.Timeout | null>(null);
   const isHydrated = useRef(false);
 
+  // ── Left panel collapse state ────────────────────────────────────────────────
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+
   // ── Restore state from localStorage on mount ────────────────────────────────
   useEffect(() => {
     try {
@@ -82,7 +88,7 @@ export default function StudioPage() {
 
   // ── Save state to localStorage on every change ──────────────────────────────
   useEffect(() => {
-    if (!isHydrated.current) return; // Don't save during initial hydration
+    if (!isHydrated.current) return;
     const state: PersistedState = {
       resumeData,
       resumeFileName,
@@ -143,7 +149,6 @@ export default function StudioPage() {
     setIsParsing(true);
     setError(null);
 
-    // Store text in sessionStorage for potential reuse
     sessionStorage.setItem("resumeText", text);
 
     try {
@@ -206,7 +211,6 @@ export default function StudioPage() {
 
     if (suggestion.action_type === "add") {
       if (suggestion.section === "skills") {
-        // Add keyword to first skill category
         const skills = [...(updated.skills || [])];
         if (skills.length > 0) {
           skills[0] = {
@@ -221,12 +225,10 @@ export default function StudioPage() {
         }
         updated.skills = skills;
       } else if (suggestion.section === "summary") {
-        // Append keyword mention to summary
         updated.summary = updated.summary
           ? `${updated.summary} Experienced with ${suggestion.keyword}.`
           : `Experienced with ${suggestion.keyword}.`;
       } else if (suggestion.section === "experience") {
-        // Add as bullet to most recent experience
         const experience = [...(updated.experience || [])];
         if (experience.length > 0) {
           experience[0] = {
@@ -240,7 +242,6 @@ export default function StudioPage() {
         updated.experience = experience;
       }
     } else if (suggestion.action_type === "rephrase") {
-      // Find the rephrase_target bullet in experience and replace
       if (suggestion.rephrase_target && suggestion.rephrase_result) {
         const experience = [...(updated.experience || [])];
         for (let i = 0; i < experience.length; i++) {
@@ -259,8 +260,6 @@ export default function StudioPage() {
     }
 
     setResumeData(updated);
-
-    // Remove accepted suggestion from list
     setSuggestions((prev) =>
       prev.filter((s) => s.keyword !== suggestion.keyword)
     );
@@ -303,19 +302,51 @@ export default function StudioPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container studio-page">
       {/* Header */}
-      <div className="page-header">
-        <h1>
-          <Sparkles
-            size={28}
-            style={{ display: "inline", verticalAlign: "middle", marginRight: 10 }}
-          />
-          Resume Studio
-        </h1>
-        <p>
-          Build, optimize, and export your resume with AI-powered gap analysis
-        </p>
+      <div className="page-header studio-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+          <h1>
+            <Sparkles
+              size={24}
+              style={{ display: "inline", verticalAlign: "middle", marginRight: 8 }}
+            />
+            Resume Studio
+          </h1>
+        </div>
+        {resumeUploaded && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div
+              className="badge badge-high"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 12px",
+                fontSize: "var(--font-xs)",
+              }}
+            >
+              <FileText size={12} />
+              {resumeFileName}
+            </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleStartNew}
+              style={{
+                fontSize: "var(--font-xs)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border-primary)",
+                padding: "4px 10px",
+              }}
+            >
+              <FilePlus2 size={12} />
+              New
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Error Banner */}
@@ -325,11 +356,11 @@ export default function StudioPage() {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "12px 16px",
+            padding: "10px 14px",
             background: "rgba(239, 68, 68, 0.1)",
             border: "1px solid rgba(239, 68, 68, 0.3)",
             borderRadius: "var(--radius-md)",
-            marginBottom: 20,
+            marginBottom: 16,
             color: "#f87171",
             fontSize: "var(--font-sm)",
           }}
@@ -350,7 +381,7 @@ export default function StudioPage() {
         </div>
       )}
 
-      {/* Upload area or file badge */}
+      {/* Upload area */}
       {!resumeUploaded && !isParsing && (
         <div style={{ marginBottom: 24 }}>
           <ResumeDropzone onFileAccepted={handleResumeUploaded} />
@@ -400,149 +431,87 @@ export default function StudioPage() {
       )}
 
       {resumeUploaded && resumeData && (
-        <>
-          {/* File badge + New Resume */}
-          <div className="studio-fade-in" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div
-                className="badge badge-high"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 14px",
-                }}
-              >
-                <FileText size={14} />
-                {resumeFileName}
-              </div>
-              <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>
-                Session auto-saved
-              </span>
-            </div>
+        <div
+          className={`studio-layout-3col studio-slide-up ${leftCollapsed ? "left-collapsed" : ""}`}
+        >
+          {/* LEFT PANEL — Resume Form */}
+          <div className={`studio-col-left ${leftCollapsed ? "collapsed" : ""}`}>
             <button
-              className="btn btn-ghost btn-sm"
-              onClick={handleStartNew}
-              style={{
-                fontSize: "var(--font-xs)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                color: "var(--text-secondary)",
-                border: "1px solid var(--border-primary)",
-              }}
+              className="panel-collapse-btn"
+              onClick={() => setLeftCollapsed(!leftCollapsed)}
+              title={leftCollapsed ? "Expand editor" : "Collapse editor"}
             >
-              <FilePlus2 size={13} />
-              Start New Resume
+              {leftCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
             </button>
-          </div>
-
-          {/* Three-panel layout */}
-          <div className="studio-layout studio-slide-up">
-            {/* LEFT PANEL - Resume Form */}
-            <div className="studio-left">
+            {!leftCollapsed && (
               <ResumeForm data={resumeData} onChange={setResumeData} />
-            </div>
+            )}
+          </div>
 
-            {/* RIGHT PANEL */}
-            <div className="studio-right">
-              {/* JD Paste Area */}
-              <div className="jd-paste-area">
-                <label className="form-label" style={{ marginBottom: 8 }}>
-                  <Wand2
-                    size={12}
-                    style={{
-                      display: "inline",
-                      verticalAlign: "middle",
-                      marginRight: 6,
-                    }}
-                  />
-                  JOB DESCRIPTION
-                </label>
-                <textarea
-                  className="form-input form-textarea"
-                  placeholder="Paste the job description here to analyze keyword gaps..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  style={{ minHeight: 120 }}
-                />
-                <div className="jd-actions">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handleAnalyzeGaps}
-                    disabled={
-                      isAnalyzing || !jobDescription.trim() || !resumeData
-                    }
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 size={14} className="spin-icon" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={14} />
-                        Analyze Gaps
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+          {/* CENTER PANEL — Command Center */}
+          <div className="studio-col-center">
+            <CommandCenter
+              resumeData={resumeData}
+              jobDescription={jobDescription}
+              onResumeUpdate={setResumeData}
+              onAnalyzeGaps={handleAnalyzeGaps}
+              isAnalyzing={isAnalyzing}
+              onJobDescriptionChange={setJobDescription}
+            />
 
-              {/* Keyword Suggestions */}
-              {(suggestions.length > 0 || isAnalyzing) && (
-                <KeywordSuggestionsComponent
-                  suggestions={suggestions}
-                  matchedKeywords={matchedKeywords}
-                  matchPercentage={matchPercentage}
-                  onAccept={handleAcceptSuggestion}
-                  onReject={handleDismissSuggestion}
-                  isLoading={isAnalyzing}
-                />
-              )}
-
-              {/* Template Picker */}
-              <TemplatePicker
-                selected={selectedTemplate}
-                onSelect={setSelectedTemplate}
+            {/* Keyword Suggestions shown below command center */}
+            {(suggestions.length > 0 || isAnalyzing) && (
+              <KeywordSuggestionsComponent
+                suggestions={suggestions}
+                matchedKeywords={matchedKeywords}
+                matchPercentage={matchPercentage}
+                onAccept={handleAcceptSuggestion}
+                onReject={handleDismissSuggestion}
+                isLoading={isAnalyzing}
               />
+            )}
+          </div>
 
-              {/* Resume Preview */}
-              <ResumePreview
-                data={resumeData}
-                template={selectedTemplate}
-              />
+          {/* RIGHT PANEL — Preview + Export */}
+          <div className="studio-col-right">
+            {/* Template Picker */}
+            <TemplatePicker
+              selected={selectedTemplate}
+              onSelect={setSelectedTemplate}
+            />
 
-              {/* Download Bar */}
-              <div className="download-bar">
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleDownload("pdf")}
-                  disabled={isExporting}
-                >
-                  {isExporting ? (
-                    <Loader2 size={16} className="spin-icon" />
-                  ) : (
-                    <FileText size={16} />
-                  )}
-                  Download PDF
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => handleDownload("docx")}
-                  disabled={isExporting}
-                >
-                  {isExporting ? (
-                    <Loader2 size={16} className="spin-icon" />
-                  ) : (
-                    <Download size={16} />
-                  )}
-                  Download DOCX
-                </button>
-              </div>
+            {/* Resume Preview */}
+            <ResumePreview data={resumeData} template={selectedTemplate} />
+
+            {/* Download Bar */}
+            <div className="download-bar">
+              <button
+                className="btn btn-primary"
+                onClick={() => handleDownload("pdf")}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <Loader2 size={16} className="spin-icon" />
+                ) : (
+                  <FileText size={16} />
+                )}
+                Download PDF
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleDownload("docx")}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <Loader2 size={16} className="spin-icon" />
+                ) : (
+                  <Download size={16} />
+                )}
+                Download DOCX
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
